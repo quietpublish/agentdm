@@ -29,7 +29,11 @@ Given a reviewed candidate and installed hook definitions in an isolated,
 operator-approved pilot, when **each real unattended launch path** starts with
 its disable marker, then the hooks emit no context and create/change no
 breadcrumb or mailbox state. Confirm independently that the MCP server/tools
-are excluded; hook markers do not disable the server.
+are excluded and that any spawned agentdm server stays inert: no registration,
+session binding or presence lock, and no store changes. The server now honors
+the markers at startup; record the actual loaded revision, not just checkout
+HEAD. [AR-01](UNATTENDED_STARTUP_REVIEW.md) records why tool denial alone was
+insufficient and the bounded launch controls for the repair.
 
 Run an enabled interactive positive control first to prove the installed hooks
 actually dispatch. Record the host/interpreter/candidate revisions, launcher,

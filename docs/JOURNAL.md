@@ -2,6 +2,20 @@
 
 Newest first. Written at the moment of realization, not reconstructed. Append-only.
 
+## 2026-09-08 — A denied tool can still have a live process behind it
+
+The host withheld every agentdm tool and both hooks stayed silent, yet startup
+still registered a session. Testing only what the agent could call missed what
+the server had already done. The repair belongs before store resolution, not in
+another tool deny entry. A disabled transport now stays responsive without
+owning an identity or touching a mailbox.
+
+The real-launcher replay also rejected our first receipt: a deliberately blocked
+SDK task is escalated, not successfully completed. Zero turns is useful evidence
+for this experiment precisely because it is not a successful sprint.
+[AR-01](UNATTENDED_STARTUP_REVIEW.md) retains the red tests, fixture corrections,
+enabled controls and unchanged-state observations.
+
 ## 2026-09-08 — The README is a user interface, not the development transcript
 
 The old front page asked a stranger to understand our host investigations,

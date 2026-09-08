@@ -27,6 +27,7 @@ names and path placeholders. Known limitations belong here, not only in a journa
 - [Acceptance trial](ACCEPTANCE_TRIAL.md): operator-owned live evidence protocol.
 - [Roadmap](ROADMAP.md): intent and acceptance gates, not a support promise.
 - [Release review](RELEASE_REVIEW.md): exact candidate receipts and open gates.
+- [Unattended startup review](UNATTENDED_STARTUP_REVIEW.md): AR-01 red/green and bounded real-launcher receipts.
 
 ## Development archive—not onboarding material
 
