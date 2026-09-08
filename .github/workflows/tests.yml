@@ -1,0 +1,31 @@
+name: Behavioral contracts
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  contracts:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python: ['3.9', '3.11', '3.14']
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Real-process and Given/When/Then contracts (no models)
+        run: python3 -m unittest discover -s tests -p 'test*.py' -v
+      - name: Deliberately broken implementations must fail their contracts
+        if: matrix.os == 'ubuntu-latest' && matrix.python == '3.11'
+        run: python3 tests/run_mutation_checks.py
