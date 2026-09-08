@@ -6,7 +6,7 @@ projects. They never call a model or change installed host configuration.
 
 Run `python3 -m unittest discover -s tests -p 'test*.py' -v`.
 Run the new slice alone with `python3 -m unittest discover -s tests -p test_acceptance.py -v`.
-Run sixteen deliberate regressions with `python3 tests/run_mutation_checks.py`.
+Run eighteen deliberate regressions with `python3 tests/run_mutation_checks.py`.
 
 ## Given / When / Then
 
@@ -27,6 +27,10 @@ Run sixteen deliberate regressions with `python3 tests/run_mutation_checks.py`.
 | AC-13 | An active wait | Register requests a replacement identity | Refuse; charge the original owner; allow register after wait | Same transport and bounded budget |
 | AC-14 | A live transport | Timeout is negative, boolean, nonfinite or string; sender is malformed | Immediate tool error; ping survives | Real stdio |
 | AC-15 | A live transport | JSON exceeds decoder nesting | Later ping survives | Real raw stdio |
+| UA-01 | No store | Server starts with either nonempty disable marker, including `0` | No state, tools or startup output; all tool calls refused; ping and EOF work | Real stdio and complete state inventory |
+| UA-02 | A live bound peer with queued mail | Disabled peers start with the same alias | All state contents and file mtimes unchanged, including bindings and presence; mail stays queued | Real stdio and complete state inventory |
+| UA-03 | Unset or empty markers | Server starts | Tools exposed and bound registration online | Enabled real-process control |
+| UA-04 | Directory outside Git | Disabled server starts | Same inert protocol; no project-resolution error or state | Real stdio |
 | PL-01 | A closed presence handle | Its descriptor is reused and close repeats | Unrelated descriptor remains open | Isolated process and real descriptors |
 | PL-02 | A closed presence handle | Its descriptor is reused and process forks | Unrelated descriptor remains open in child | Real fork and child exit |
 | CL-01 | No store | Human CLI usage is invalid | Usage error, exit 2, no state creation | Real bin/agentdm; separate state per subcase |
@@ -38,7 +42,7 @@ Run sixteen deliberate regressions with `python3 tests/run_mutation_checks.py`.
 | DOC-04 | A source distribution | License is read | Selected MIT notice and disclaimer are present | LICENSE file |
 | DOC-05 | Current documentation | Path examples are inspected | No personal absolute home or private session scratch paths | Names-only pattern check; not a history/secret audit |
 
-AC IDs map to `tests/test_acceptance.py`, PL to `tests/test_presence_lifetime.py`,
+UA IDs map to `tests/test_unattended.py`, AC to `tests/test_acceptance.py`, PL to `tests/test_presence_lifetime.py`,
 CL to `tests/test_cli_contract.py`, and DOC to `tests/test_documentation.py`; assertions use externally
 observable outcomes, not expected values derived from production constants.
 Existing tests remain in `tests/test_failures.py`. The new fixture removes its

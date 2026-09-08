@@ -92,8 +92,11 @@ Both scripts exit without output or state writes if either `AGENTDM_DISABLE`
 or `DARKER_HEADLESS` is **nonempty**. Use `1` to disable; setting `0` also
 disables. Unset the marker to remove that particular guard.
 
-These markers guard the hooks, **not the MCP server or its tools**. Configure
-unattended hosts to exclude the server/tools independently. Prove both paths
+The server also checks these markers at startup, before resolving any store:
+it lists no tools, refuses tool calls, and creates no registration, binding or
+presence lock. Initialization and ping still work; startup is silent. Existing
+servers require restart to read changed environment. The human CLI is unchanged.
+Configure unattended hosts to exclude the server/tools independently. Prove both paths
 under the actual launcher with a positive control showing hooks really are
 installed. A missing hook would also look silent. Do not pipe mailbox content
 through a coordinator as a workaround. The darker integration has its own

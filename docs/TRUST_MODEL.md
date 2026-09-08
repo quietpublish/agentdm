@@ -64,8 +64,14 @@ you. Coordinate explicitly and retain normal Git review/merge checks.
   by both real unattended launch paths.
 
 For unattended work, deny/exclude the MCP server or its tools **and** suppress
-inherited hooks. Hook-disable markers alone do not disable the server. Never
-treat a green interactive test as proof of an unattended policy boundary.
+inherited hooks. When `DARKER_HEADLESS` or `AGENTDM_DISABLE` is nonempty at
+server startup, the transport stays responsive but lists no tools, refuses
+tool calls, and never resolves a store, registers or acquires a presence lock.
+The same markers silence both hooks. `0` also disables; unset or empty enables.
+This is an inherited-environment guard, not protection against a host that
+removes or overrides it. It does not retroactively disable a running server or
+the human CLI. Keep the host-side deny/exclusion policy independently, and
+verify the actual launchers; a green interactive test is not that receipt.
 
 ## Reporting a problem
 

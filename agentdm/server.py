@@ -125,14 +125,22 @@ class Server:
         self.send = send or _stdout_send
         self._cancelled = set()
         self._waiting_rid = None
-        env = env or os.environ
-        project = env.get("AGENTDM_PROJECT_DIR") or env.get("CLAUDE_PROJECT_DIR") or os.getcwd()
+        env = os.environ if env is None else env
+        # Startup owns this boundary: a host may spawn denied MCP servers anyway.
+        # Match the hooks' nonempty-marker semantics before any store/identity work.
+        self.disabled = bool(env.get("DARKER_HEADLESS") or env.get("AGENTDM_DISABLE"))
+        self.store, self.hold = None, None
+        self.reg = {"alias": None, "incarnation_id": None, "reclaim_token": None}
+        self.family, self.session_id = "unknown", None
         self.error = None
+        if self.disabled:
+            self.error = "agentdm is inactive: unattended"
+            return
+        project = env.get("AGENTDM_PROJECT_DIR") or env.get("CLAUDE_PROJECT_DIR") or os.getcwd()
         try:
             self.store = resolve_store(project)
         except AgentdmError as exc:                    # not a git repo: stay up, answer every tool with the reason
             self.store, self.error = None, f"agentdm is inactive here: {exc}"
-            self.reg, self.hold, self.family, self.session_id = {"alias": None, "incarnation_id": None, "reclaim_token": None}, None, "unknown", None
             return
         self.ppid = os.getppid()
         self.family = detect_family(env, self.ppid)
@@ -199,7 +207,7 @@ class Server:
         elif method == "ping":
             self.send({"jsonrpc": "2.0", "id": rid, "result": {}})
         elif method == "tools/list":
-            self.send({"jsonrpc": "2.0", "id": rid, "result": {"tools": TOOLS}})
+            self.send({"jsonrpc": "2.0", "id": rid, "result": {"tools": [] if self.disabled else TOOLS}})
         elif method == "tools/call":
             name, args = params["name"], params.get("arguments", {})
             if name == "wait" and self._waiting_rid is not None:
@@ -329,8 +337,9 @@ def render(name, payload):
 
 def serve(env=None):
     server = Server(env)
-    sys.stderr.write(server.error + "\n" if server.error else
-                     f"agentdm: {server.alias} ({server.family}) registered in {server.store.path}\n")
+    if not server.disabled:
+        sys.stderr.write(server.error + "\n" if server.error else
+                         f"agentdm: {server.alias} ({server.family}) registered in {server.store.path}\n")
     server.serve_forever()
 
 

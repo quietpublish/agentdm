@@ -14,6 +14,10 @@ from acceptance_support import isolated_environment
 
 ROOT = Path(__file__).resolve().parents[1]
 MUTATIONS = [
+    ("unattended-startup-writes", "agentdm/server.py", "if self.disabled:", "if False:",
+     "test_unattended.UnattendedAcceptance.test_ua01_disabled_startup_creates_no_state"),
+    ("disabled-tools-exposed", "agentdm/server.py", "[] if self.disabled else TOOLS", "TOOLS",
+     "test_unattended.UnattendedAcceptance.test_ua04_disabled_startup_does_not_require_a_git_project"),
     ("scalar-json", "agentdm/protocol.py", "if not isinstance(raw, dict):", "if False:",
      "ProtocolAcceptance.test_ac01_non_object_json_cannot_end_the_server"),
     ("notification-authority", "agentdm/protocol.py", 'if rid is None and method != "notifications/cancelled":', "if False:",
@@ -57,7 +61,7 @@ def run(root, selector):
 
 
 def main():
-    baseline = run(ROOT, ["test_acceptance", "test_presence_lifetime", "test_cli_contract", "test_documentation"])
+    baseline = run(ROOT, ["test_acceptance", "test_presence_lifetime", "test_cli_contract", "test_documentation", "test_unattended"])
     if baseline.returncode:
         print(baseline.stdout + baseline.stderr)
         print("REFUSED: mutation checks require green acceptance baseline")
