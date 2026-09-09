@@ -2,6 +2,22 @@
 
 Newest first. Written at the moment of realization, not reconstructed. Append-only.
 
+## 2026-09-09 — A fixture that names a number is asserting a premise it never checks
+
+AC-15 promised "JSON exceeds decoder nesting" and then sent 2,000 arrays. That
+number was the premise on 3.11 and a no-op on 3.14, where the decoder's ceiling
+comes from the C stack, not the recursion limit. The server survived either way,
+so the test stayed green while the handler it existed to protect could be
+deleted. Removing the handler is what showed it: a mutation that nothing rejects.
+
+The repair derives the depth in the interpreter the server will run under and
+fails the test outright when no depth is refused, which turns the silent
+vacuity into a loud one. The derived depth also moved between a standalone
+probe and the test process on the same 3.14 build, so the ceiling is a property
+of the whole stack, not the version string. Twice the first refused depth is
+the headroom for that. [Follow-up 2026-09-09](UNATTENDED_STARTUP_REVIEW.md)
+records the per-interpreter depths and the mutation receipts.
+
 ## 2026-09-08 — A denied tool can still have a live process behind it
 
 The host withheld every agentdm tool and both hooks stayed silent, yet startup

@@ -28,6 +28,26 @@ def isolated_environment(state, root=ROOT):
     return env
 
 
+def decoder_nesting_depth(limit=1 << 22):
+    """An array depth this interpreter's json decoder refuses with RecursionError.
+
+    The decoder's ceiling moved from the recursion limit (about 1,000 on 3.11) to a
+    C-stack check (10,000 on 3.13, hundreds of thousands on 3.14), so a fixed depth
+    silently stops exercising its premise. Probe in the interpreter the server runs
+    under, return twice the first refused depth for headroom, and fail outright
+    rather than pass vacuously when no probed depth is refused.
+    """
+    depth = 1000
+    while depth <= limit:
+        try:
+            json.loads("[" * depth + "0" + "]" * depth)
+        except RecursionError:
+            return depth * 2
+        depth *= 2
+    raise AssertionError("no array depth up to %d raises RecursionError on Python %s"
+                         % (limit, sys.version.split()[0]))
+
+
 class StdioPeer:
     def __init__(self, case, alias="acceptance"):
         self.case = case

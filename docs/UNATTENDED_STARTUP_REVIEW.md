@@ -88,3 +88,25 @@ The local replay archive is private synthetic evidence, not shipped runtime
 data. Publishing this fix still needs CI on its own candidate; baseline CI does
 not verify a later commit. Host denial and shared activation remain separate
 integration/operator decisions.
+
+## Follow-up 2026-09-09: portable AC-15 failure control
+
+The surviving `decoder-recursion` mutation above was a fixture defect, not a
+startup regression. The scenario sent 2,000 nested arrays, a depth only the
+recursion-limit-based decoders of 3.9/3.11 refuse; 3.12+ check the C stack
+instead. `tests/acceptance_support.decoder_nesting_depth` now doubles from
+1,000 until `json.loads` raises `RecursionError` in the test's own interpreter
+(the server runs under `sys.executable`, in its main thread, like the probe),
+returns twice that depth, and raises an assertion failure if no depth up to
+4,194,304 is refused. Derived depths: 2,000 on 3.9.6 and 3.11.15, 32,000 on
+3.13.7, 256,000 on 3.14.6. A standalone probe on 3.14.6 needed 500,000, so
+the ceiling depends on the surrounding call stack as well as the version —
+which is the reason to derive it where it is used and add headroom.
+
+Receipts (local macOS): all 68 tests pass on 3.9.6, 3.11.15, 3.13.7 and
+3.14.6; `tests/run_mutation_checks.py` reports 18 of 18 rejected by assertion
+on both 3.11.15 and 3.14.6, with `decoder-recursion` also rejected in isolation
+on 3.9.6 and 3.13.7. Before the change the same mutation survived on 3.13.7 and
+3.14.6 (single-case rerun, `OK`). No runtime file changed. Hosted CI on this
+candidate remains the publication gate.
+

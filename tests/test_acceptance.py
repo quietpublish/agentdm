@@ -7,7 +7,7 @@ import os
 import unittest
 from unittest.mock import patch
 
-from acceptance_support import AcceptanceCase, StdioPeer, isolated_environment
+from acceptance_support import AcceptanceCase, StdioPeer, decoder_nesting_depth, isolated_environment
 
 
 class ProtocolAcceptance(AcceptanceCase):
@@ -150,8 +150,9 @@ class ProtocolAcceptance(AcceptanceCase):
 
     def test_ac15_deeply_nested_json_cannot_end_the_server(self):
         """Given a live server; when JSON exceeds decoder nesting; then later ping survives."""
+        depth = decoder_nesting_depth()
         peer = self.peer()
-        peer.raw(b"[" * 2000 + b"0" + b"]" * 2000 + b"\n")
+        peer.raw(b"[" * depth + b"0" + b"]" * depth + b"\n")
         peer.send({"jsonrpc": "2.0", "id": 2, "method": "ping"})
         self.assertEqual(peer.response(2)["result"], {})
 

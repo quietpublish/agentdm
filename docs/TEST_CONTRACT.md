@@ -73,6 +73,11 @@ fabricated red. Run deliberate mutations in disposable copies and require the
 relevant acceptance case to reject them. Do not weaken assertions to get green.
 The mutation runner requires a green baseline, checks failures are assertions
 rather than import errors, and deletes only its own disposable copies afterward.
+A fixture whose premise depends on the interpreter derives it at run time and
+fails when it cannot be met: AC-15 probes the depth at which this Python's JSON
+decoder raises `RecursionError` (about 2,000 on 3.9/3.11, 32,000 on 3.13,
+256,000 on 3.14) instead of naming one, so a more permissive decoder cannot
+turn the scenario vacuous and let the recursion mutation survive.
 
 Protocol validation belongs at the incoming-message boundary; it must not call
 store operations until a request shape is validated. Framing owns EOF versus
