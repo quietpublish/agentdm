@@ -9,6 +9,11 @@ from email.message import EmailMessage
 UNFOLDED = email.policy.default.clone(max_line_length=None)
 ALIAS_RE = re.compile(r"^[a-z0-9][a-z0-9._-]{0,63}$")
 HUMAN = "human"
+# Declared intent of a message. Request kinds expect an explicit outcome (accepted|declined) from the
+# recipient; acknowledging one is not accepting it, and accepting is not proof the work was done.
+KINDS = ("note", "question", "handoff", "review-request", "claim", "ack")
+REQUEST_KINDS = ("question", "handoff", "review-request", "claim")
+OUTCOMES = ("accepted", "declined")
 
 
 class AgentdmError(Exception): ...
@@ -85,7 +90,8 @@ def resolve_store(project_dir, state_home=None):
 
 
 class Store:
-    DIRS = ("presence", "incarnations", "aliases", "bindings", "bindings/host", "mail", "offers", "acks", "claims")
+    DIRS = ("presence", "incarnations", "aliases", "bindings", "bindings/host", "mail", "offers", "acks",
+            "outcomes", "claims")
 
     def __init__(self, path, project_key, common_dir, root):
         self.path, self.project_key, self.common_dir, self.root = path, project_key, common_dir, root
@@ -366,8 +372,8 @@ class Store:
         actor = self._actor(from_alias, from_inc)
         if to_alias != HUMAN and self._alias_current(to_alias) is None:
             raise AgentdmError(f"unknown recipient alias {to_alias!r}")
-        if kind not in ("note", "question", "claim", "handoff", "ack"):
-            raise AgentdmError("kind must be note|question|claim|handoff|ack")
+        if kind not in KINDS:
+            raise AgentdmError("kind must be " + "|".join(KINDS))
         mid = f"<{uuid.uuid4().hex}@agentdm>"
         msg = EmailMessage(policy=UNFOLDED)
         msg["Message-ID"] = mid
@@ -389,9 +395,24 @@ class Store:
         with open(path, "rb") as f:
             m = email.message_from_binary_file(f, policy=email.policy.default)
         body = m.get_body(preferencelist=("plain",))
+        kind = m["X-Agentdm-Kind"]
         return {"message_id": m["Message-ID"], "from": m["From"], "to": m["To"],
-                "subject": m["Subject"], "date": m["Date"], "kind": m["X-Agentdm-Kind"],
+                "subject": m["Subject"], "date": m["Date"], "kind": kind,
+                "expects_outcome": kind in REQUEST_KINDS,
                 "in_reply_to": m["In-Reply-To"], "body": body.get_content() if body else ""}
+
+    def _find(self, alias, message_id):
+        """The stored message with this Message-ID in one alias's mailbox, or None."""
+        base = self._p("mail", alias)
+        for sub in ("new", "cur"):
+            folder = os.path.join(base, sub)
+            if not os.path.isdir(folder):
+                continue
+            for fn in sorted(os.listdir(folder)):
+                m = self._parse(os.path.join(folder, fn))
+                if m["message_id"] == message_id:
+                    return m
+        return None
 
     def inbox(self, alias, inc):
         """Return queued + offered-but-unacknowledged messages. Idempotent and replayable."""
@@ -414,6 +435,9 @@ class Store:
                          "first_offered_at": (prior or {}).get("first_offered_at") or _now()})
             m["state"] = "offered"
             m["previously_offered"] = prior is not None
+            outcome = _read_json(self._p("outcomes", f"{key}.json"))
+            if outcome:
+                m["outcome"] = outcome["outcome"]
             out.append(m)
         return out
 
@@ -427,13 +451,43 @@ class Store:
             raise AgentdmError("message was offered to a different incarnation; fetch it first")
         _write_json(self._p("acks", f"{key}.json"), {"acked_by": inc or HUMAN, "alias": alias, "acked_at": _now()})
 
+    def decide(self, alias, inc, message_id, outcome, note=""):
+        """Record the recipient's explicit outcome for a request-kind message and queue a reply to
+        its sender. A fourth receipt, separate from ack: acknowledging is not accepting, and
+        accepting is not completion. One outcome per message; the first decision stands."""
+        self._actor(alias, inc)
+        if outcome not in OUTCOMES:
+            raise AgentdmError("outcome must be " + "|".join(OUTCOMES))
+        key = _mid_key(message_id)
+        offer = _read_json(self._p("offers", f"{key}.json"))
+        if not offer or offer["alias"] != alias:
+            raise AgentdmError("message was never offered to that alias")
+        if offer["offered_to"] != (inc or HUMAN):
+            raise AgentdmError("message was offered to a different incarnation; fetch it first")
+        if os.path.exists(self._p("outcomes", f"{key}.json")):
+            raise AgentdmError("message already has an outcome; the first decision stands")
+        m = self._find(alias, message_id)
+        if m is None:
+            raise AgentdmError("message is no longer in that mailbox")
+        if m["kind"] not in REQUEST_KINDS:
+            raise AgentdmError(f"kind {m['kind']!r} does not take an outcome; only " + "|".join(REQUEST_KINDS))
+        sender = str(m["from"] or "").partition("/")[2].rpartition("@")[0]
+        reply = self.send(alias, inc, sender, f"{outcome}: {m['subject']}", note or "", "ack", message_id)
+        _write_json(self._p("outcomes", f"{key}.json"),
+                    {"outcome": outcome, "decided_by": inc or HUMAN, "alias": alias, "decided_at": _now(),
+                     "kind": m["kind"], "reply_message_id": reply, "note": note or ""})
+        return {"message_id": message_id, "outcome": outcome, "reply_message_id": reply,
+                "reply_to": sender, "kind": m["kind"]}
+
     def status(self, message_id):
         key = _mid_key(message_id)
+        outcome = _read_json(self._p("outcomes", f"{key}.json"))
+        extra = {"outcome": outcome} if outcome else {}
         if os.path.exists(self._p("acks", f"{key}.json")):
-            return {"state": "acknowledged", **_read_json(self._p("acks", f"{key}.json"))}
+            return {"state": "acknowledged", **_read_json(self._p("acks", f"{key}.json")), **extra}
         offer = _read_json(self._p("offers", f"{key}.json"))
         if offer:
-            return {"state": "offered", **offer}
+            return {"state": "offered", **offer, **extra}
         return {"state": "queued"}
 
     # ---------------------------------------------------------------- claims

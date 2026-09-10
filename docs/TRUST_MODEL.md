@@ -14,7 +14,8 @@ open. Gemini, Cursor, Windows, network/synced filesystems and multi-user or
 cross-machine messaging are not verified/supported use cases.
 
 There is no daemon or network service in agentdm. Each connected host runs its
-own stdio process. Host sandboxes, inherited environment and connection recovery
+own stdio process. The only outbound network traffic is the optional human
+notification, which is off unless the human enables it from the CLI. Host sandboxes, inherited environment and connection recovery
 can differ by version; use actual observations instead of assuming one host's
 behavior applies to another.
 
@@ -51,6 +52,18 @@ or the user's session. Session binding must be independently usable. Expiry,
 disconnect or ambiguity must not be promoted to ownership transfer. Advisory
 claims do not lock files, prevent conflicting edits or resolve path overlap for
 you. Coordinate explicitly and retain normal Git review/merge checks.
+
+## Optional notifications leave the machine
+
+When the human enables ntfy or Telegram pushes, agentdm sends metadata about
+some messages to that third party: project directory name, sender alias,
+recipient alias, kind, outcome, and the subject only if explicitly enabled.
+Bodies, reasons and notes are never sent. A push is not a receipt: it says a
+message was queued, not that anyone fetched, acknowledged or acted on it. The
+endpoint, token and setting file are readable by any program running as your
+OS user. Do not enable pushes if the subject line or the fact of coordination
+is itself sensitive, and use a self-hosted or access-controlled topic where
+that matters. An agent cannot enable, change or send a push through the server.
 
 ## Limits that still matter
 

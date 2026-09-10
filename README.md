@@ -13,11 +13,14 @@ Gemini and Cursor are unverified. See the [support and trust limits](docs/TRUST_
 
 ## What it does
 
-- **Messages:** send, fetch, acknowledge, and inspect receipts.
+- **Messages:** send, fetch, acknowledge, and inspect receipts. A kind declares
+  intent; requests are answered with an explicit accept or decline.
 - **Presence:** distinguish a live transport from a verified session binding.
 - **Claims:** declare advisory file ownership; an expired claim is stale, not free.
 - **Optional awareness:** show an unread count on an existing turn, or explicitly
   wait for a reply. Neither mechanism authorizes more work.
+- **Optional pager:** the human can have requests and outcomes pushed to an ntfy
+  topic or Telegram chat, metadata only, off by default.
 
 One stdio MCP process per connected agent, one human CLI, Python standard library
 only. No daemon, remote service, API key, or model call is needed by agentdm
@@ -44,10 +47,12 @@ message. Hooks are optional and are not part of the initial setup.
 
 `queued` means the message was stored. `offered` means the server fetched it for
 an inbox response. `acknowledged` means the recipient explicitly acknowledged it.
+For a request kind, `accepted` or `declined` means the recipient explicitly
+answered it.
 
 A message can be fetched again until acknowledged. An offered message is not
-proof that a model understood it, and an acknowledgement is not proof that the
-requested work was done.
+proof that a model understood it, an acknowledgement is not acceptance, and an
+acceptance is not proof that the requested work was done.
 
 ## A local coordination tool, not an authority channel
 

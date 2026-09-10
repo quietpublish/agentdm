@@ -1,6 +1,6 @@
 # Roadmap
 
-Maintainer reference, updated 2026-09-08. This records intent and acceptance
+Maintainer reference, updated 2026-09-10. This records intent and acceptance
 gates, not delivery dates or a support promise. See the [user guides](README.md)
 for current behavior and the [release review](RELEASE_REVIEW.md) for receipts.
 
@@ -13,6 +13,11 @@ prepared. None of that substitutes for a live acceptance day or publication.
 
 Standing constraints: local, same-user, pull-only; one canonical project store;
 separate presence, availability and claims; Python standard library; no daemon.
+
+Added 2026-09-10, ahead of the acceptance day so it can observe them: message
+kinds as declared intent, an `accepted`/`declined` outcome receipt separate from
+`ack`, and an opt-in, metadata-only human pager over ntfy or Telegram. The pager
+is the one outbound network path and is off unless the human enables it.
 
 ## Next: earn the release evidence
 
@@ -34,7 +39,8 @@ observations; do not clean them up to make a milestone look complete.
   consulted and explicitly released by interactive contributors.
 - Consider a pinned-interpreter installer or packaging only after the
   second-machine setup establishes what is actually needed.
-- Consider optional human notifications if ordinary use demonstrates a need.
+- Judge whether the human pager earned its place: keep it only if the working
+  day shows it was read and acted on without becoming a nudge to an agent.
 
 Feeding peer messages to unattended campaign children is not a planned shortcut.
 Any future design for admitting that assistance needs separate authorization,

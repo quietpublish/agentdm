@@ -49,13 +49,13 @@ def decoder_nesting_depth(limit=1 << 22):
 
 
 class StdioPeer:
-    def __init__(self, case, alias="acceptance"):
+    def __init__(self, case, alias="acceptance", session="acceptance-session"):
         self.case = case
         self.buffer = b""
         self.messages = []
         self.stderr = tempfile.TemporaryFile()
         env = dict(case.env, AGENTDM_PROJECT_DIR=str(case.project),
-                   AGENTDM_ALIAS=alias, AGENTDM_SESSION_ID="acceptance-session",
+                   AGENTDM_ALIAS=alias, AGENTDM_SESSION_ID=session,
                    AGENTDM_WAIT_BUDGET_S="2")
         self.process = subprocess.Popen(
             [sys.executable, "-m", "agentdm.server"], cwd=case.project, env=env,
@@ -120,6 +120,45 @@ class StdioPeer:
         return json.loads(response["result"]["content"][0]["text"])
 
 
+class LocalEndpoint:
+    """A loopback HTTP sink standing in for ntfy or the Telegram API. Records every request."""
+
+    def __init__(self, case, status=200, stall_s=0.0):
+        import http.server, threading
+        endpoint = self
+        endpoint.hits = []
+
+        class Handler(http.server.BaseHTTPRequestHandler):
+            def do_POST(self):
+                body = self.rfile.read(int(self.headers.get("Content-Length") or 0))
+                if stall_s:
+                    time.sleep(stall_s)                      # a slow pager, not a dead one
+                endpoint.hits.append({"path": self.path, "headers": dict(self.headers), "body": body.decode()})
+                self.send_response(status)
+                self.send_header("Content-Length", "2")
+                self.end_headers()
+                self.wfile.write(b"ok")
+
+            def log_message(self, *args):
+                pass
+
+        self.server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        self.url = "http://127.0.0.1:%d" % self.server.server_address[1]
+        self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
+        self.thread.start()
+        case.addCleanup(self.close)
+
+    def close(self):
+        self.server.shutdown()
+        self.server.server_close()
+
+    def wait_for(self, count, timeout=3.0):
+        deadline = time.monotonic() + timeout
+        while len(self.hits) < count and time.monotonic() < deadline:
+            time.sleep(0.02)
+        return list(self.hits)
+
+
 class AcceptanceCase(unittest.TestCase):
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory(prefix="agentdm-acceptance-")
@@ -132,8 +171,13 @@ class AcceptanceCase(unittest.TestCase):
         subprocess.run(["git", "init", "-q", str(self.project)], check=True,
                        capture_output=True, timeout=5, env=self.env)
 
-    def peer(self):
-        return StdioPeer(self)
+    def peer(self, alias="acceptance", session="acceptance-session"):
+        return StdioPeer(self, alias, session)
+
+    def cli(self, *arguments, input=""):
+        return subprocess.run([sys.executable, str(ROOT / "bin" / "agentdm"), *arguments],
+                              cwd=self.project, env=self.env, capture_output=True, text=True,
+                              input=input, timeout=5)
 
     def hook(self, name, payload, markers=None):
         return subprocess.run([sys.executable, str(ROOT / "hooks" / name)],

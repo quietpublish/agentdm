@@ -50,6 +50,21 @@ MUTATIONS = [
      "test_documentation.DocumentationAcceptance.test_doc02_local_markdown_links_resolve"),
     ("wrong-hook-event", "docs/HOOKS.md", '"UserPromptSubmit": [{', '"BeforeAgent": [{',
      "test_documentation.DocumentationAcceptance.test_doc03_hook_examples_are_parseable_and_run_inert_when_disabled"),
+    ("second-outcome-overwrites", "agentdm/store.py", 'if os.path.exists(self._p("outcomes", f"{key}.json")):\n            raise', 'if False:\n            raise',
+     "test_intents.IntentAcceptance.test_in01_decline_is_a_receipt_separate_from_ack_and_replies_to_the_sender"),
+    ("outcome-on-informational-kind", "agentdm/store.py", 'if m["kind"] not in REQUEST_KINDS:', 'if False:',
+     "test_intents.IntentAcceptance.test_in02_outcomes_need_an_offered_request_kind"),
+    ("outcome-without-offer", "agentdm/store.py", 'if not offer or offer["alias"] != alias:\n            raise AgentdmError("message was never offered to that alias")\n        if offer["offered_to"] != (inc or HUMAN):\n            raise AgentdmError("message was offered to a different incarnation; fetch it first")\n        if os.path.exists(self._p("outcomes"',
+     'if False:\n            raise AgentdmError("message was never offered to that alias")\n        if offer and offer["offered_to"] != (inc or HUMAN):\n            raise AgentdmError("message was offered to a different incarnation; fetch it first")\n        if os.path.exists(self._p("outcomes"',
+     "test_intents.IntentAcceptance.test_in02_outcomes_need_an_offered_request_kind"),
+    ("notify-off-keeps-setting", "agentdm/notify.py", 'os.remove(path)\n        except FileNotFoundError:', 'pass\n        except FileNotFoundError:',
+     "test_notify.NotifyAcceptance.test_nt05_human_cli_owns_the_setting"),
+    ("notify-leaks-subject", "agentdm/notify.py", 'if config.get("subject") and event.get("subject"):', 'if event.get("subject"):',
+     "test_notify.NotifyAcceptance.test_nt02_ntfy_push_carries_metadata_only_and_never_delays_the_send"),
+    ("notify-peer-notes", "agentdm/notify.py", 'return event["to"] == HUMAN or event["kind"] in REQUEST_KINDS', 'return True',
+     "test_notify.NotifyAcceptance.test_nt02_ntfy_push_carries_metadata_only_and_never_delays_the_send"),
+    ("notify-blocks-send", "agentdm/notify.py", 'if sync:\n        run()', 'if True:\n        run()',
+     "test_notify.NotifyAcceptance.test_nt04_unreachable_or_stalled_endpoint_cannot_fail_or_stall_the_send"),
 ]
 
 
@@ -61,7 +76,8 @@ def run(root, selector):
 
 
 def main():
-    baseline = run(ROOT, ["test_acceptance", "test_presence_lifetime", "test_cli_contract", "test_documentation", "test_unattended"])
+    baseline = run(ROOT, ["test_acceptance", "test_presence_lifetime", "test_cli_contract", "test_documentation",
+                          "test_unattended", "test_intents", "test_notify"])
     if baseline.returncode:
         print(baseline.stdout + baseline.stderr)
         print("REFUSED: mutation checks require green acceptance baseline")

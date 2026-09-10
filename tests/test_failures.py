@@ -626,7 +626,7 @@ class T15ToolRegistryPin(Base):
     (scripts/darker_sdk.py _PEER_MESSAGING_MCP_TOOLS, wo-ad11). A new tool here that is not added there
     would be reachable by a lights-out drive with no test failing on either side. This pin makes the
     registry change loud: update KNOWN_TOOLS and darker's list together."""
-    KNOWN_TOOLS = ["ack", "claim", "claims", "inbox", "register", "release", "send", "status", "wait", "who", "whoami"]
+    KNOWN_TOOLS = ["accept", "ack", "claim", "claims", "decline", "inbox", "register", "release", "send", "status", "wait", "who", "whoami"]
 
     def test_tool_registry_matches_the_list_darker_denies(self):
         from agentdm.server import TOOLS

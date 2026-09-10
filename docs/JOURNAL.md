@@ -91,6 +91,32 @@ evidence and the remaining live, platform and publication gates. A public-ready
 label is not earned by a larger test count. The installed server remains on its
 original checkout; these changes are a local review candidate.
 
+## 2026-09-10 — A fourth receipt, because "acknowledged" was doing two jobs
+
+Matt asked what the next stage should be, and the honest answer was that the receipts had a hole.
+`acknowledged` was carrying both "I read your handoff" and "I will do your handoff", which is the
+same kind of overclaim DM-04 through DM-10 kept finding: one observable event standing in for two.
+So `kind` is now declared intent, four kinds are requests, and a request gets its own outcome
+receipt: `accepted` or `declined`, recorded beside offers and acks, one per message, the first
+decision standing. Deciding queues an ordinary `ack`-kind reply to the sender so `wait` and `inbox`
+need nothing new. The rule worth keeping is written into the inbox frame: acknowledging is not
+accepting, accepting is a promise to try, declining is not a transfer to anyone else.
+
+The other half of the ask was a pager: ntfy or Telegram. That is the first outbound network path
+this tool has, so it is off until the human enables it from the CLI, an agent cannot switch it on
+through the server, and the push carries metadata only: project, sender, recipient, kind, outcome,
+subject only on explicit opt-in, never a body, reason or note. The server pushes on a daemon thread
+so a slow endpoint cannot delay a tool response; the CLI pushes inline because its process would
+exit before a thread delivered, which the Telegram test found in the first run. A closed loopback
+port refuses instantly, so a test that only used one could not tell a blocking push from a
+background one; the stalling-endpoint fixture was added so the mutation that makes the server push
+synchronously actually reddens.
+
+Red on 95f95d8: seven of ten new scenarios failed against the unchanged tree; the other three are
+refusal-shaped and passed vacuously, so they are regression coverage, not fabricated reds. The tool
+registry pin (T15) changed: darker's explicit deny list must add `accept` and `decline` before any
+unattended surface trusts this revision.
+
 ## 2026-09-08 — The channel reviewed itself, and every finding was a claim I had not earned
 
 Seven findings from the Codex session in one evening, DM-04 through DM-10, every one of them a

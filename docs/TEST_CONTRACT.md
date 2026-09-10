@@ -6,7 +6,7 @@ projects. They never call a model or change installed host configuration.
 
 Run `python3 -m unittest discover -s tests -p 'test*.py' -v`.
 Run the new slice alone with `python3 -m unittest discover -s tests -p test_acceptance.py -v`.
-Run eighteen deliberate regressions with `python3 tests/run_mutation_checks.py`.
+Run twenty-five deliberate regressions with `python3 tests/run_mutation_checks.py`.
 
 ## Given / When / Then
 
@@ -41,9 +41,20 @@ Run eighteen deliberate regressions with `python3 tests/run_mutation_checks.py`.
 | DOC-03 | Published hook JSON | Examples are parsed and commands run with either disable marker | Correct event wiring; no output/state; enabled session positive control writes | Real scripts; not real-host dispatch |
 | DOC-04 | A source distribution | License is read | Selected MIT notice and disclaimer are present | LICENSE file |
 | DOC-05 | Current documentation | Path examples are inspected | No personal absolute home or private session scratch paths | Names-only pattern check; not a history/secret audit |
+| IN-01 | An offered handoff | Recipient declines | Outcome receipt is separate from ack; the sender's inbox holds the reply; a second decision is refused | Real stdio, status and inbox |
+| IN-02 | A note and an unfetched handoff | Accept or decline is attempted | Refused; no outcome; no reply queued | Real stdio, status and zero-wait |
+| IN-03 | A review-request and a note | Fetched | Only the request expects an outcome; the frame says ack is not acceptance | Real inbox text |
+| IN-04 | A live sender | Kind is outside the vocabulary | Refused; nothing queued | Real stdio |
+| IN-05 | An agent's question to the human | Human accepts from the CLI | Reply reaches the agent; status shows accepted; a note cannot be answered; `--kind` is validated | Real bin/agentdm and stdio |
+| NT-01 | No notify setting | A request is sent | No HTTP request; no setting file | Loopback HTTP sink |
+| NT-02 | ntfy enabled at a loopback sink | Requests, notes and a decline occur | One titled POST per wanted event with sender, recipient, kind and outcome; no subject unless enabled; never a body or reason; send returns at once | Loopback HTTP sink and timing |
+| NT-03 | Telegram enabled at a loopback API | Human declines | One JSON POST to sendMessage with the chat id and metadata only | Loopback HTTP sink |
+| NT-04 | ntfy at a stalling endpoint, then a closed port | A request is sent | Receipt queued; response under one second; transport survives | Loopback HTTP sink and timing |
+| NT-05 | The human CLI | Configure, test, turn off | Invalid forms exit 2; test reaches the sink and prints its status; off removes the file | Real bin/agentdm |
 
 UA IDs map to `tests/test_unattended.py`, AC to `tests/test_acceptance.py`, PL to `tests/test_presence_lifetime.py`,
-CL to `tests/test_cli_contract.py`, and DOC to `tests/test_documentation.py`; assertions use externally
+CL to `tests/test_cli_contract.py`, DOC to `tests/test_documentation.py`, IN to `tests/test_intents.py`,
+and NT to `tests/test_notify.py`; assertions use externally
 observable outcomes, not expected values derived from production constants.
 Existing tests remain in `tests/test_failures.py`. The new fixture removes its
 owned processes and temporary state even on assertion failure and scrubs ambient
@@ -78,6 +89,15 @@ fails when it cannot be met: AC-15 probes the depth at which this Python's JSON
 decoder raises `RecursionError` (about 2,000 on 3.9/3.11, 32,000 on 3.13,
 256,000 on 3.14) instead of naming one, so a more permissive decoder cannot
 turn the scenario vacuous and let the recursion mutation survive.
+
+The outcome receipt is owned by the store beside offers and acks: it requires a
+prior offer to the same alias and incarnation, a request kind, and no earlier
+outcome, and it queues its reply through the ordinary send path so no second
+delivery mechanism exists. The notifier owns nothing about mail state: it reads
+the human's setting, decides whether an event is wanted, renders metadata only,
+and pushes on a daemon thread from the server or inline from the short-lived
+CLI. Loopback HTTP sinks stand in for ntfy and Telegram; no test reaches the
+network.
 
 Protocol validation belongs at the incoming-message boundary; it must not call
 store operations until a request shape is validated. Framing owns EOF versus
