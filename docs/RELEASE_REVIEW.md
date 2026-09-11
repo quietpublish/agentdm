@@ -4,6 +4,34 @@ Status: local hardening candidate, **not approved for publication**. Installed
 main remains `025863e`. The release branch is `test/public-readiness-contracts`.
 No hook activation, remote creation or paid model use accompanies these tests.
 
+## 2026-09-10 update: intents, outcome receipt, pager; first hosted matrix receipt
+
+Development candidate `5a55b45` (base `95f95d8`) adds message kinds as declared
+intent, an `accepted`/`declined` outcome receipt separate from `ack` (tools
+`accept`/`decline`), and an opt-in, metadata-only human pager over ntfy or
+Telegram. Scenarios IN-01–05 and NT-01–05 in the [GWT contract](TEST_CONTRACT.md)
+were run red first: seven of ten failed on `95f95d8`; three refusal-shaped
+scenarios passed vacuously and are retained as regression coverage, not
+reported as discovered bugs. Local receipt on Python 3.14.6, macOS: 78 tests
+pass, exit 0, 39.3s; all 25 mutations rejected by assertions, none invalid or
+surviving.
+
+Public export: the same tree was replayed onto the clean-history repository as
+`d0614fb` under the publishing account's noreply identity, differing from the
+development tree only by the export note and its index link. The hosted
+"Behavioral contracts" workflow ran on `d0614fb` across ubuntu/macOS ×
+Python 3.9/3.11/3.14 and concluded success
+([run 34540118375](https://github.com/quietpublish/agentdm/actions/runs/34540118375)).
+That closes the hosted-matrix gate for this candidate only; it is not a live
+acceptance or hook receipt.
+
+Tool registry change: `accept` and `decline` were added to the T15 pin. The
+consuming deny list in darker was updated in lockstep (`d3d94417` there, P0h
+and the headless deny gate green). The pager is the tool's first outbound
+network path; it is off by default, enabled only by the human CLI, and the
+[roadmap](ROADMAP.md) asks the acceptance day to judge whether it earned its
+place.
+
 ## 2026-09-08 update: license and reader-facing documentation
 
 The owner selected MIT; [LICENSE](../LICENSE) now carries the notice under
@@ -113,9 +141,9 @@ also remains an operator rotation action; never publish raw session logs.
 ## Remaining release gates
 
 - Owner-selected license and an explicit public-history/privacy decision.
-- Hosted Linux/macOS Python matrix on the publication candidate, when a staging
-  push is authorized. A local Linux container is useful independent evidence,
-  not that hosted receipt.
+- Hosted Linux/macOS Python matrix on the publication candidate: received for
+  `d0614fb` (2026-09-10 update above). Re-earn it on every later candidate; a
+  local Linux container is useful independent evidence, not that receipt.
 - Real darker launch-path hook silence with a positive control proving hooks
   dispatch; tool/marker pins and direct-hook tests remain narrower evidence.
 - Approved two-step hook pilot and an ordinary working day of truthful roster
