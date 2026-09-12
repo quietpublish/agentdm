@@ -25,6 +25,7 @@ names and path placeholders. Known limitations belong here, not only in a journa
 - [Contributing](../CONTRIBUTING.md): TDD workflow and verification commands.
 - [Executable test contract](TEST_CONTRACT.md): Given/When/Then scenarios.
 - [Acceptance trial](ACCEPTANCE_TRIAL.md): operator-owned live evidence protocol.
+- [Acceptance trial record 2026-09-12](ACCEPTANCE_TRIAL_2026_09_12.md): preconditions as found and the day's observations.
 - [Roadmap](ROADMAP.md): intent and acceptance gates, not a support promise.
 - [Release review](RELEASE_REVIEW.md): exact candidate receipts and open gates.
 - [Unattended startup review](UNATTENDED_STARTUP_REVIEW.md): AR-01 red/green and bounded real-launcher receipts.
