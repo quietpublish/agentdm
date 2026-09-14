@@ -278,7 +278,8 @@ class Server:
             kind = a.get("kind", "note")
             mid = s.send(self.alias, self.inc, a["to"], a["subject"], a["body"], kind, a.get("in_reply_to"),
                          about_claim=a.get("about_claim"))
-            notify.notify(s, {"event": "send", "from": self.alias, "to": a["to"], "kind": kind, "subject": a["subject"]})
+            notify.notify(s, {"event": "send", "from": self.alias, "to": a["to"], "kind": kind, "subject": a["subject"],
+                              "message_id": mid, "claims": notify.held_claim_ids(s, a["to"])})
             return {"message_id": mid, "state": "queued", "expects_outcome": kind in REQUEST_KINDS}
         if name == "inbox":
             msgs = s.inbox(self.alias, self.inc)
@@ -289,7 +290,7 @@ class Server:
             outcome = name + "ed" if name == "accept" else "declined"
             result = s.decide(self.alias, self.inc, a["message_id"], outcome, a.get("note") or a.get("reason") or "")
             notify.notify(s, {"event": "outcome", "by": self.alias, "to": result["reply_to"],
-                              "kind": result["kind"], "outcome": outcome})
+                              "kind": result["kind"], "outcome": outcome, "message_id": a["message_id"]})
             return {k: v for k, v in result.items() if k not in ("reply_to", "kind")}
         if name == "claim":
             return {"claim_id": s.claim(self.inc, a["paths"], a.get("branch"), a.get("ttl_s", 3600))}

@@ -6,7 +6,7 @@ projects. They never call a model or change installed host configuration.
 
 Run `python3 -m unittest discover -s tests -p 'test*.py' -v`.
 Run the new slice alone with `python3 -m unittest discover -s tests -p test_acceptance.py -v`.
-Run thirty-four deliberate regressions with `python3 tests/run_mutation_checks.py`.
+Run thirty-six deliberate regressions with `python3 tests/run_mutation_checks.py`.
 
 ## Given / When / Then
 
@@ -37,6 +37,7 @@ Run thirty-four deliberate regressions with `python3 tests/run_mutation_checks.p
 | CL-02 | A directory outside Git | Human requests roster | Concise error, exit 1, no traceback/state | Real bin/agentdm |
 | CL-03 | A fresh project | Help then valid send/inbox run | Help is inert; message is actually stored and fetched | Real human CLI and store |
 | CL-04 | Messages with receipts and outcomes, a held claim, a queued request | Human runs `log` | One date-ordered timeline, each item once with state and outcome, no body; offers/acks/outcomes unchanged; extra args exit 2 | Real bin/agentdm and store inventory |
+| CL-05 | Mail queued for an agent and the human; no store elsewhere | `glance` runs | One line of per-alias counts, nothing when nothing is unread, nothing and no store outside one, offers untouched, extra args exit 2 | Real bin/agentdm and store inventory |
 | DOC-01 | A new reader | README routes them by audience | User, contributor and license entrypoints exist | Local documentation |
 | DOC-02 | A local Markdown link | Its file target is followed | Target exists | All repository Markdown docs; not an external-link or anchor checker |
 | DOC-03 | Published hook JSON | Examples are parsed and commands run with either disable marker | Correct event wiring; no output/state; enabled session positive control writes | Real scripts; not real-host dispatch |
@@ -59,6 +60,7 @@ Run thirty-four deliberate regressions with `python3 tests/run_mutation_checks.p
 | NT-04 | ntfy at a stalling endpoint, then a closed port | A request is sent | Receipt queued; response under one second; transport survives | Loopback HTTP sink and timing |
 | NT-05 | The human CLI | Configure, test, turn off | Invalid forms exit 2; test reaches the sink and prints its status; off removes the file | Real bin/agentdm |
 | NT-06 | ntfy enabled with a cap of 3 per sender per hour | One sender queues five requests, another one | Exactly three pushes from the first sender, one from the second; every send still queued; a non-numeric cap exits 2 | Loopback HTTP sink |
+| NT-07 | ntfy enabled, a claim on a secret path, a request about it, then a decline | The pushes go out | The request push carries its short message id and the claim id, the outcome push the decided id; never the path, subject, body or reason | Loopback HTTP sink |
 
 UA IDs map to `tests/test_unattended.py`, AC to `tests/test_acceptance.py`, PL to `tests/test_presence_lifetime.py`,
 CL to `tests/test_cli_contract.py`, DOC to `tests/test_documentation.py`, IN to `tests/test_intents.py`,

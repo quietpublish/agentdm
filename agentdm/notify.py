@@ -73,7 +73,13 @@ def wants(config, event):
     return event["to"] == HUMAN or event["kind"] in REQUEST_KINDS
 
 
+def short_id(message_id):
+    return (message_id or "").strip("<>").split("@")[0][:8]
+
+
 def render(store, config, event):
+    """Title and text: aliases, kind, outcome, the short message id, and the recipient's claim ids, so the
+    human's next command needs no lookup. Ids only: never a path, and the subject only on opt-in."""
     title = "agentdm " + os.path.basename(store.root)
     if event["event"] == "outcome":
         text = f"{event['by']} {event['outcome']} {event['kind']} from {event['to']}"
@@ -81,7 +87,15 @@ def render(store, config, event):
         text = f"{event['from']} -> {event['to']}: {event['kind']}"
     if config.get("subject") and event.get("subject"):
         text += " | " + event["subject"]
+    if event.get("message_id"):
+        text += f" [msg {short_id(event['message_id'])}]"
+    if event.get("claims"):
+        text += " [claims " + ",".join(event["claims"]) + "]"
     return title, text
+
+
+def held_claim_ids(store, alias):
+    return [c["id"] for c in store.claims() if c["alias"] == alias and c["state"] == "held"]
 
 
 def requests_for(config, title, text):

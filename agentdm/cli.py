@@ -1,6 +1,6 @@
 """Human CLI. The human is a participant with fixed alias `human`."""
 import json, os, sys, time
-from .store import resolve_store, HUMAN, AgentdmError, KINDS
+from .store import resolve_store, find_store, HUMAN, AgentdmError, KINDS
 from . import notify
 
 USAGE = """agentdm - local DMs between agent sessions in this project
@@ -20,6 +20,7 @@ USAGE = """agentdm - local DMs between agent sessions in this project
   agentdm release <claim-id>           human release (the only path besides the holder)
   agentdm tail                         poll human's inbox every second
   agentdm log                          one timeline of every message (receipt, outcome) and claim; reads only
+  agentdm glance                       per-alias unread counts, one line, nothing when nothing; for status lines
   agentdm store                        resolved store path for this project
   agentdm notify                       show the human notification setting (off by default)
   agentdm notify ntfy <topic-url> [token]        push metadata to an ntfy topic
@@ -61,7 +62,7 @@ def main(argv=None):
     arity = {"who": (0, 1), "send": (2, None), "inbox": (0, 0), "ack": (1, 1),
              "accept": (1, None), "decline": (1, None),
              "status": (1, 1), "claims": (0, 0), "release": (1, 1), "tail": (0, 0),
-             "name": (2, 2), "forget": (1, 1), "gc": (0, 0), "store": (0, 0), "notify": (0, 3), "log": (0, 0)}
+             "name": (2, 2), "forget": (1, 1), "gc": (0, 0), "store": (0, 0), "notify": (0, 3), "log": (0, 0), "glance": (0, 0)}
     minimum, maximum = arity.get(cmd, (0, 0))
     invalid = (cmd not in arity or len(args) < minimum
                or (maximum is not None and len(args) > maximum)
@@ -71,6 +72,24 @@ def main(argv=None):
     if invalid:
         print(USAGE, file=sys.stderr)
         return 2
+    if cmd == "glance":
+        # Read-only and silent by default: a status-line segment must never create a store, offer a
+        # message, or print when there is nothing to say. Counts only, never a subject or body.
+        from .awareness import unread_count
+        store = find_store(os.environ.get("AGENTDM_PROJECT_DIR") or os.getcwd())
+        if store is None:
+            return 0
+        parts = []
+        for alias in sorted(r["alias"] for r in store.roster()):
+            try:
+                n = unread_count(store, alias)
+            except AgentdmError:
+                n = "?"                                     # unreadable is not zero (DM-09)
+            if n:
+                parts.append(f"{alias}:{n}")
+        if parts:
+            print(" ".join(parts))
+        return 0
     try:
         store = resolve_store(os.environ.get("AGENTDM_PROJECT_DIR") or os.getcwd())
         if cmd == "who":
@@ -91,7 +110,7 @@ def main(argv=None):
             outcome = "accepted" if cmd == "accept" else "declined"
             result = store.decide(HUMAN, None, args[0], outcome, " ".join(args[1:]))
             notify.notify(store, {"event": "outcome", "by": HUMAN, "to": result["reply_to"],
-                                  "kind": result["kind"], "outcome": outcome}, sync=True)
+                                  "kind": result["kind"], "outcome": outcome, "message_id": args[0]}, sync=True)
             print(f"{outcome}; reply {result['reply_message_id']} queued for {result['reply_to']}")
         elif cmd == "status":
             print(json.dumps(store.status(args[0]), indent=1))

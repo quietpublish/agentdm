@@ -86,3 +86,27 @@ class LogAcceptance(AcceptanceCase):
         after = sorted(str(p.relative_to(state)) for p in state.rglob("*") if p.parent.name in ("offers", "acks", "outcomes"))
         self.assertEqual(before, after, "reading the log must not offer, ack or decide anything")
         self.assertEqual(self.cli("log", "extra").returncode, 2)
+
+
+class GlanceAcceptance(AcceptanceCase):
+    def test_cl05_glance_prints_counts_only_and_creates_nothing(self):
+        """Given mail queued for beta and for the human; when `glance` runs; then it prints per-alias
+        unread counts and nothing else, offers nothing, prints nothing when nothing is unread, and
+        outside any store prints nothing and creates nothing."""
+        from acceptance_support import StdioPeer
+        empty_state = self.scratch / "state-empty"
+        result = subprocess.run([sys.executable, str(ROOT / "bin" / "agentdm"), "glance"], cwd=self.project,
+                                env=dict(self.env, XDG_STATE_HOME=str(empty_state)), capture_output=True, text=True, timeout=5)
+        self.assertEqual((result.returncode, result.stdout, result.stderr), (0, "", ""))
+        self.assertFalse(empty_state.exists(), "glance must never create a store")
+        a = self.peer("alpha", "alpha-session")
+        self.peer("beta", "beta-session")
+        self.assertEqual(self.cli("glance").stdout, "", "nothing unread: print nothing")
+        a.call(2, "send", to="beta", subject="PRIVATE_SUBJECT", body="PRIVATE_BODY", kind="handoff"); a.response(2)
+        a.call(3, "send", to="human", subject="PRIVATE_SUBJECT", body="PRIVATE_BODY", kind="note"); a.response(3)
+        state = self.state / "agentdm"
+        before = sorted(str(p) for p in state.rglob("offers/*"))
+        out = self.cli("glance").stdout.strip()
+        self.assertEqual(out, "beta:1 human:1")
+        self.assertEqual(before, sorted(str(p) for p in state.rglob("offers/*")), "glance offers nothing")
+        self.assertEqual(self.cli("glance", "extra").returncode, 2)

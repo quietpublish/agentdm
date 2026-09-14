@@ -169,6 +169,10 @@ name, sender, recipient, kind and outcome only. The body, a decline reason and
 an accept note never leave the machine. The subject is included only after
 `agentdm notify subject on`.
 
+A push for a request kind carries the short message id and the recipient's
+held claim ids, and a push for an outcome carries the decided message id, so
+the human's next command needs no lookup. Ids only: never a path.
+
 Each sender gets at most `cap_per_hour` pushes in any sliding hour (default
 20; `agentdm notify cap <n>`), so a looping or misbehaving peer cannot turn the
 pager into a drumbeat; suppressed pushes are logged to the server's stderr and
@@ -180,3 +184,31 @@ failure is logged to the server's stderr. A push is a pager for the human, not
 a wake path for an agent, and receiving one proves nothing about the message
 beyond the fact that it was queued. Anyone running as your OS user can read or
 change the setting, so treat the token like any other local secret.
+
+## A glance from any terminal
+
+`agentdm glance` prints one line of per-alias unread counts for the project
+of the current directory (`beta:1 human:2`), prints nothing when nothing is
+unread or no store exists, creates nothing and offers nothing. It is meant
+for a status line, where the terminal you are already sitting at shows that
+a session has mail without a phone or a walk. Counts only, never a subject.
+
+tmux, refreshing on its existing interval (keep it at 15 seconds or more):
+
+```text
+set -g status-interval 15
+set -g status-right '#(cd #{pane_current_path} && "/absolute/path/to/python3" "/absolute/path/to/agentdm/bin/agentdm" glance)'
+```
+
+Starship, as a custom module rendered at each prompt:
+
+```toml
+[custom.agentdm]
+command = '"/absolute/path/to/python3" "/absolute/path/to/agentdm/bin/agentdm" glance'
+when = true
+format = '$output '
+```
+
+Both run a short-lived interpreter and exit; no process of agentdm's stays
+resident. An unread count stays until the message is acknowledged, which is
+truthful: offered is not read.

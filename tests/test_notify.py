@@ -149,3 +149,30 @@ class NotifyCapAcceptance(AcceptanceCase):
         self.assertEqual(sum(1 for h in hits if h["body"].startswith("sender ->")), 3)
         self.assertEqual(sum(1 for h in hits if h["body"].startswith("other ->")), 1)
         self.assertEqual(self.cli("notify", "cap", "zero").returncode, 2)
+
+
+class NotifyIdsAcceptance(AcceptanceCase):
+    def test_nt07_pushes_carry_ids_never_paths(self):
+        """Given ntfy enabled, beta holding a claim on a secret path and alpha requesting it; when the
+        pushes go out; then the request push carries its message id and beta's claim id, the outcome
+        push carries the decided message id, and neither carries the path, subject or body."""
+        endpoint = LocalEndpoint(self)
+        self.cli("notify", "ntfy", endpoint.url + "/t")
+        alpha = self.peer("alpha", "alpha-session")
+        beta = self.peer("beta", "beta-session")
+        beta.call(2, "claim", paths=["secret/PRIVATE_PATH.md"], ttl_s=600)
+        claim = StdioPeer.payload(beta.response(2))["claim_id"]
+        alpha.call(2, "send", to="beta", subject="PRIVATE_SUBJECT", body="PRIVATE_BODY", kind="claim", about_claim=claim)
+        mid = StdioPeer.payload(alpha.response(2))["message_id"]
+        short = mid.strip("<>").split("@")[0][:8]
+        hit = endpoint.wait_for(1)[0]["body"]
+        self.assertIn("alpha -> beta: claim", hit)
+        self.assertIn(short, hit)
+        self.assertIn(claim, hit)
+        beta.call(3, "inbox"); beta.response(3)
+        beta.call(4, "decline", message_id=mid, reason="PRIVATE_REASON"); beta.response(4)
+        hit = endpoint.wait_for(2)[1]["body"]
+        self.assertIn("beta declined claim from alpha", hit)
+        self.assertIn(short, hit)
+        for body in (h["body"] for h in endpoint.hits):
+            self.assertNotIn("PRIVATE_", body)
