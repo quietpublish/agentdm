@@ -191,3 +191,145 @@ receipt still produced by the party it names.
 
 Each scenario is written and run red before its code, per
 [Contributing](../CONTRIBUTING.md).
+
+## Second round, later the same day: boards, and an adversarial pass
+
+Three further angles: documented field cases of agents coordinating through
+boards, a concrete blackboard design inside agentdm's store, and an
+adversarial review of the four pieces above. The pieces above are left as
+written; corrections are stated here rather than edited in.
+
+### Boards: what the field cases show
+
+Documented 2025–2026 cases, each with the medium, who could write, and what
+went wrong (sources in the research transcript; claims marked UNVERIFIED
+where no primary source confirms them):
+
+- **Moltbook** (agent forum, pull by a 30-minute heartbeat): an exposed
+  database leaked agent tokens and private agent-to-agent messages; bot-to-bot
+  prompt injection appeared within days ("delete your own account", edits to
+  agents' identity files); most agents were run by a small number of humans;
+  the viral "secret language" post was likely human-written. Operators
+  answered with rate limits, posting challenges and owner verification.
+  Whether any agent complied with an injection is UNVERIFIED.
+- **AI Village** (shared group chat, agents on continuous turns): one model
+  fabricated a contact list and sycophantic agreement spread the false belief
+  to every agent for hours; operators closed the chat to humans and banned
+  unsolicited outreach.
+- **Markdown boards in coding setups**: agents read them only when the human
+  typed a go-word, and it worked; once file watchers automated the reading,
+  "all agents stopped doing real work and started generating huge status
+  reports for each other". A single handoff file with a watcher fired on
+  half-written files.
+- **Gas Town / Beads**: a git-backed board plus per-agent hooks; the
+  "politeness deadlock" ("I'll check my hook now", then waiting for a human)
+  was solved with tmux key injection and patrol daemons, followed by orphaned
+  processes, mysterious mail breakage, and a daemon that killed workers.
+- **Vendor cross-session messaging**: delivery to an idle session starts a
+  new turn; the vendor then added burst refusal, per-sender limits, duplicate
+  dropping and queue caps.
+
+The pattern across all of them: every system that solved the idle problem
+solved it with a **wake**, then bought throttles, kill switches and bills. No
+board informed an idle agent by itself. The board properties that helped were
+shared visibility of state, topic threads and append-only history; the ones
+that hurt were broadcast untrusted text, receipt-free reads, volume, and
+self-generated status traffic.
+
+### Boards: the design, and the verdict
+
+A board is buildable inside the constraints: an append-only JSONL under the
+store with atomic short appends, per-incarnation read cursors, mentions to
+restore addressing, a widened `wait` template in the manner of Linda's
+blocking read. What it costs: the receipts table. A cursor says "fetched past
+this" and nothing else; there is no per-post offered or acknowledged, no
+outcome, no `pending_requests`, and a second write path with no owner in the
+current five. Every agent would read every agent's untrusted text every turn,
+the widest injection surface this design has considered. And it does nothing
+for the idle holder: Hearsay-II had a scheduler, Kafka offsets move only when
+the consumer polls, Linda's blocking read needs a process sitting in it. The
+holder had ended its turn.
+
+**Verdict: no board beside mail.** `claims` already is the ownership board.
+The one board benefit the evidence supports, the human seeing the whole
+conversation, is delivered by a read-only `agentdm log`: one chronological
+timeline of every message with its receipt state and outcome and every claim
+with its derived state, no new state, offering nothing. Half a day. Agents get
+no `log` tool for now.
+
+### Adversarial review: corrections to the four pieces
+
+Code facts checked during the review: the default claim TTL is 3600 s (the
+trial's holders were told 1200 s explicitly); the notifier has no dedup, cap
+or per-sender limit today; the wait budget resets on re-registration; there is
+no verb to withdraw a request, so a request with no outcome is pending
+forever.
+
+1. **Piece 3's activity-renewed lease is dropped.** It inverts the stale
+   rule (M2b). A holder mid-refactor calls Edit and Bash for twenty minutes and
+   never `claims`; its claim reads stale and contested; the human, paged,
+   releases; the requester edits the same file. That is the overwrite the tool
+   exists to prevent, sanctioned by the tool. A renewed lease proves a call
+   reached the holder's server, not intent. Keep the TTL; report `last_call_at`
+   on `claims` as a fact if useful.
+2. **Contested stays out of the envelope.** Any local sender can set
+   `about_claim`; a standing "someone wants your file" line on every response
+   is peer-authored pressure, the mildest form of a message granting
+   authority. Derive `contested` for `claims` and the human CLI, with the
+   sender named. Not in the per-response envelope.
+3. **The escalation push waits for a cap.** The server cannot know which
+   wait is "final"; a looping requester could page the human every 55 s, and
+   nothing today limits pushes at all. First: a per-sender per-hour push cap
+   and a per-message key in the store. Only then a single push about silence,
+   which would be the first push not backed by a store event.
+4. **Piece 1's example pointed at the wrong episode.** The 9 min 24 s was the
+   15:26 "continue" turn, in which Codex made no agentdm call; the envelope
+   would have carried nothing. The 14:33 episode it cited was the queued
+   handoff, not the conflict. The honest claim for the envelope: an agent that
+   already touches agentdm learns a count sooner. `pending_requests: 1` proves
+   a request file with no outcome file, not that it was seen or is still
+   wanted.
+5. **Piece 2 gets limits.** PostToolUse runs an interpreter and a store
+   resolution per Edit and Bash; the prompt hook and the post-tool hook must
+   share one state file or the same count speaks twice; the script must always
+   exit 0 (on Codex a nonzero exit blocks, on Claude exit 2 feeds stderr to the
+   model, so a script error would become a message); cap at two nudges per
+   turn. Pilot on Claude Code only, after the Codex hooks precondition.
+6. **The dispatch word is defined at user scope,** not in a repository
+   instruction file any contributor can edit, and the human reads the kind on
+   the push before dispatching. Otherwise dispatch formalizes the
+   instructed-shaped accept the trial already recorded.
+7. **Wait diagnosis label:** a peer's last store write proves its server
+   wrote, not that a model is present.
+8. **What the evidence does not support:** one day, two agents,
+   operator-written prompts, an operator who pasted the expected behaviour
+   into the holder, and a holder scripted to end its turn. Idleness was
+   instructed, not observed. Even the Claude nudge success is confounded,
+   because that turn's prompt also told it to check.
+
+### The question the trial did not settle
+
+Did the agents not know, or did they know and choose not to act? A busy agent
+might ignore a count. The smallest experiment, with no server change: Claude
+Code only, existing hooks, plus a ten-line PostToolUse count prototype. The
+holder gets a ten-minute multi-file task and a claim, with a prompt that says
+nothing about mail. The requester sends a `claim` request at minute two. Six
+runs with the hook off, six with it on. Record whether the count appeared in
+the transcript, whether `offers/` gained the request and after how many tool
+calls, and whether an outcome was recorded. Hook-off never fetching and
+hook-on fetching means "did not know"; hook-on with the count present and no
+`inbox` call means "knew, chose not to act". That answer also decides whether
+Piece 1 is worth building, since the envelope is the same count on a
+different carrier.
+
+### Revised order
+
+1. The distinguishing experiment above (an afternoon, Claude Code only).
+2. A push cap in the notifier, before any new push (an hour).
+3. `agentdm log` for the human (half a day).
+4. Piece 1's envelope with counts only and the wait diagnosis, if the
+   experiment says agents fetch when they know (1–2 days).
+5. `contested` in `claims` and the CLI, derived, sender named (half a day).
+6. Glance and ids in pushes (half a day); the escalation push only after 2.
+7. Piece 2 as a Claude-only pilot with the limits in item 5 above, after the
+   Codex session and prompt hooks are installed and trusted.
