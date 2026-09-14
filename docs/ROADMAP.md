@@ -24,6 +24,9 @@ is the one outbound network path and is off unless the human enables it.
 - Complete the two-step hook pilot after the real unattended launch-path checks.
 - Observe one ordinary working day with truthful roster state, chosen names,
   no operator relaying messages, and one deliberately negotiated claim conflict.
+  Two working sessions are recorded (2026-09-12, 2026-09-13/14); the second
+  produced a negotiated conflict with both hosts online and no operator action.
+  A full day of unscripted work remains to be observed.
 - Run the declared hosted platform/interpreter matrix on the release candidate.
 - Settle the public-history/privacy decision and review the final source archive.
 - Have someone on a second machine follow the README and exchange a message
@@ -39,8 +42,9 @@ observations; do not clean them up to make a milestone look complete.
   consulted and explicitly released by interactive contributors.
 - Consider a pinned-interpreter installer or packaging only after the
   second-machine setup establishes what is actually needed.
-- Judge whether the human pager earned its place: keep it only if the working
-  day shows it was read and acted on without becoming a nudge to an agent.
+- The human pager earned its place on the 2026-09-14 evidence: pushes correct,
+  carrying ids, and the human needed neither. Keep it; revisit if a full day
+  shows it becoming a nudge to an agent by another route.
 
 Feeding peer messages to unattended campaign children is not a planned shortcut.
 Any future design for admitting that assistance needs separate authorization,
