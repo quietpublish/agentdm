@@ -23,6 +23,7 @@ USAGE = """agentdm - local DMs between agent sessions in this project
   agentdm notify ntfy <topic-url> [token]        push metadata to an ntfy topic
   agentdm notify telegram <bot-token> <chat-id>  push metadata to a Telegram chat
   agentdm notify subject on|off        include the message subject (default off; never the body)
+  agentdm notify cap <n>               at most n pushes per sender per hour (default 20)
   agentdm notify test                  send one synthetic push now and print the result
   agentdm notify off                   remove the setting
 Project is $AGENTDM_PROJECT_DIR or the current directory (any subdir or worktree of the repo).
@@ -35,6 +36,8 @@ def _notify_form_ok(args):
         return True
     if head == ("ntfy",):
         return len(rest) in (1, 2)
+    if head == ("cap",):
+        return len(rest) == 1 and rest[0].isdigit() and int(rest[0]) > 0
     return head == ("telegram",) and len(rest) == 2
 
 
@@ -122,6 +125,9 @@ def main(argv=None):
             elif args[0] == "subject":
                 config["subject"] = args[1] == "on"
                 notify.save(store, config); print("subject: " + args[1])
+            elif args[0] == "cap":
+                config["cap_per_hour"] = int(args[1])
+                notify.save(store, config); print("cap: %s per sender per hour" % args[1])
             elif args[0] == "test":
                 if not config:
                     raise AgentdmError("notifications are off; configure ntfy or telegram first")

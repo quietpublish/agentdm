@@ -6,7 +6,7 @@ projects. They never call a model or change installed host configuration.
 
 Run `python3 -m unittest discover -s tests -p 'test*.py' -v`.
 Run the new slice alone with `python3 -m unittest discover -s tests -p test_acceptance.py -v`.
-Run twenty-five deliberate regressions with `python3 tests/run_mutation_checks.py`.
+Run twenty-six deliberate regressions with `python3 tests/run_mutation_checks.py`.
 
 ## Given / When / Then
 
@@ -51,6 +51,7 @@ Run twenty-five deliberate regressions with `python3 tests/run_mutation_checks.p
 | NT-03 | Telegram enabled at a loopback API | Human declines | One JSON POST to sendMessage with the chat id and metadata only | Loopback HTTP sink |
 | NT-04 | ntfy at a stalling endpoint, then a closed port | A request is sent | Receipt queued; response under one second; transport survives | Loopback HTTP sink and timing |
 | NT-05 | The human CLI | Configure, test, turn off | Invalid forms exit 2; test reaches the sink and prints its status; off removes the file | Real bin/agentdm |
+| NT-06 | ntfy enabled with a cap of 3 per sender per hour | One sender queues five requests, another one | Exactly three pushes from the first sender, one from the second; every send still queued; a non-numeric cap exits 2 | Loopback HTTP sink |
 
 UA IDs map to `tests/test_unattended.py`, AC to `tests/test_acceptance.py`, PL to `tests/test_presence_lifetime.py`,
 CL to `tests/test_cli_contract.py`, DOC to `tests/test_documentation.py`, IN to `tests/test_intents.py`,

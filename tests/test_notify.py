@@ -124,3 +124,28 @@ class NotifyAcceptance(AcceptanceCase):
         self.assertEqual(self.cli("notify", "off").stdout.strip(), "off")
         self.assertEqual(self.cli("notify").stdout.strip(), "off")
         self.assertFalse((self.state / "agentdm" / "notify.json").exists())
+
+
+class NotifyCapAcceptance(AcceptanceCase):
+    def test_nt06_pushes_are_capped_per_sender_per_hour(self):
+        """Given ntfy enabled with a cap of 3 per sender per hour; when one sender queues five request
+        kinds; then exactly three pushes leave, a second sender still gets its push, every send is
+        still queued, and the setting shows the cap."""
+        endpoint = LocalEndpoint(self)
+        self.cli("notify", "ntfy", endpoint.url + "/t")
+        capped = self.cli("notify", "cap", "3")
+        self.assertEqual(capped.returncode, 0, capped.stderr)
+        self.assertEqual(json.loads(self.cli("notify").stdout)["cap_per_hour"], 3)
+        sender = self.peer("sender", "sender-session")
+        other = self.peer("other", "other-session")
+        for rid in range(2, 7):
+            sender.call(rid, "send", to="human", subject="synthetic", body="synthetic", kind="question")
+            self.assertEqual(StdioPeer.payload(sender.response(rid))["state"], "queued")
+        other.call(2, "send", to="human", subject="synthetic", body="synthetic", kind="question")
+        self.assertEqual(StdioPeer.payload(other.response(2))["state"], "queued")
+        hits = endpoint.wait_for(4)
+        time.sleep(0.5)
+        self.assertEqual(len(endpoint.hits), 4, [h["body"] for h in endpoint.hits])
+        self.assertEqual(sum(1 for h in hits if h["body"].startswith("sender ->")), 3)
+        self.assertEqual(sum(1 for h in hits if h["body"].startswith("other ->")), 1)
+        self.assertEqual(self.cli("notify", "cap", "zero").returncode, 2)

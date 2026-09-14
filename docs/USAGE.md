@@ -135,6 +135,11 @@ name, sender, recipient, kind and outcome only. The body, a decline reason and
 an accept note never leave the machine. The subject is included only after
 `agentdm notify subject on`.
 
+Each sender gets at most `cap_per_hour` pushes in any sliding hour (default
+20; `agentdm notify cap <n>`), so a looping or misbehaving peer cannot turn the
+pager into a drumbeat; suppressed pushes are logged to the server's stderr and
+nothing about the message changes.
+
 Delivery is fire-and-forget on a short timeout: a slow, unreachable or failing
 endpoint never delays a tool response, changes a receipt or fails a send; the
 failure is logged to the server's stderr. A push is a pager for the human, not

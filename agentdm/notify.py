@@ -6,10 +6,11 @@ human explicitly turned that on. Delivery is fire-and-forget on a daemon thread 
 a failed or slow push never delays, fails or changes the receipt of the message it describes. This is
 the human's pager, not an agent wake path: an agent cannot enable it through the server.
 """
-import json, os, sys, threading, urllib.request
+import fcntl, json, os, sys, threading, time, urllib.request
 from .store import HUMAN, REQUEST_KINDS, _read_json, _write_json
 
 TIMEOUT_S = 5.0
+DEFAULT_CAP_PER_HOUR = 20      # per sender: a looping or spamming peer cannot turn the pager into a drumbeat
 
 
 def config_path(store):
@@ -30,6 +31,37 @@ def save(store, config):
         return
     _write_json(path, config)
     os.chmod(path, 0o600)
+
+
+def state_path(store):
+    return os.path.join(os.path.dirname(store.path), "notify-state.json")
+
+
+def admit(store, config, sender, now=None):
+    """Sliding one-hour window per sender. Returns True and records the push, or False when the cap
+    is reached. The state file is shared by every server on the machine, so it is updated under a lock."""
+    cap = config.get("cap_per_hour", DEFAULT_CAP_PER_HOUR)
+    now = time.time() if now is None else now
+    path = state_path(store)
+    fd = os.open(path, os.O_RDWR | os.O_CREAT, 0o600)
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX)
+        raw = os.read(fd, 1 << 20)
+        try:
+            state = json.loads(raw) if raw else {}
+        except ValueError:
+            state = {}
+        recent = [t for t in state.get(sender, []) if now - t < 3600.0]
+        if len(recent) >= cap:
+            return False
+        recent.append(now)
+        state = {k: [t for t in v if now - t < 3600.0] for k, v in state.items() if k != sender}
+        state[sender] = recent
+        os.lseek(fd, 0, os.SEEK_SET); os.ftruncate(fd, 0)
+        os.write(fd, json.dumps(state).encode())
+        return True
+    finally:
+        os.close(fd)
 
 
 def wants(config, event):
@@ -90,6 +122,10 @@ def notify(store, event, config=None, sync=False):
         return False
     requests = requests_for(config, *render(store, config, event))
     if not requests:
+        return False
+    sender = event.get("from") or event.get("by") or "?"
+    if not admit(store, config, sender):
+        sys.stderr.write(f"agentdm: notification from {sender} suppressed: cap reached for this hour\n")
         return False
 
     def run():
