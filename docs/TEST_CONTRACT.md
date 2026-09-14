@@ -6,7 +6,7 @@ projects. They never call a model or change installed host configuration.
 
 Run `python3 -m unittest discover -s tests -p 'test*.py' -v`.
 Run the new slice alone with `python3 -m unittest discover -s tests -p test_acceptance.py -v`.
-Run twenty-six deliberate regressions with `python3 tests/run_mutation_checks.py`.
+Run twenty-seven deliberate regressions with `python3 tests/run_mutation_checks.py`.
 
 ## Given / When / Then
 
@@ -36,6 +36,7 @@ Run twenty-six deliberate regressions with `python3 tests/run_mutation_checks.py
 | CL-01 | No store | Human CLI usage is invalid | Usage error, exit 2, no state creation | Real bin/agentdm; separate state per subcase |
 | CL-02 | A directory outside Git | Human requests roster | Concise error, exit 1, no traceback/state | Real bin/agentdm |
 | CL-03 | A fresh project | Help then valid send/inbox run | Help is inert; message is actually stored and fetched | Real human CLI and store |
+| CL-04 | Messages with receipts and outcomes, a held claim, a queued request | Human runs `log` | One date-ordered timeline, each item once with state and outcome, no body; offers/acks/outcomes unchanged; extra args exit 2 | Real bin/agentdm and store inventory |
 | DOC-01 | A new reader | README routes them by audience | User, contributor and license entrypoints exist | Local documentation |
 | DOC-02 | A local Markdown link | Its file target is followed | Target exists | All repository Markdown docs; not an external-link or anchor checker |
 | DOC-03 | Published hook JSON | Examples are parsed and commands run with either disable marker | Correct event wiring; no output/state; enabled session positive control writes | Real scripts; not real-host dispatch |

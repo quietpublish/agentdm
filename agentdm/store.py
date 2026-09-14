@@ -3,7 +3,7 @@
 State authority lives in agentdm's own records (incarnations/, aliases/, bindings/, offers/, acks/,
 claims/). Maildir is storage only: its folders and flags carry no application state.
 """
-import email, email.policy, email.utils, hashlib, hmac, json, mailbox, os, re, secrets, subprocess, time, uuid
+import datetime, email, email.policy, email.utils, hashlib, hmac, json, mailbox, os, re, secrets, subprocess, time, uuid
 from email.message import EmailMessage
 
 UNFOLDED = email.policy.default.clone(max_line_length=None)
@@ -489,6 +489,31 @@ class Store:
         if offer:
             return {"state": "offered", **offer, **extra}
         return {"state": "queued"}
+
+    def timeline(self):
+        """Every message in every mailbox with its receipt and outcome, and every claim with its derived
+        state, as one date-ordered list. Read-only: offers, acks and outcomes are not touched, and
+        bodies are not included. A view for the human, not a tool for agents."""
+        rows = []
+        for alias in sorted(os.listdir(self._p("mail"))):
+            for sub in ("new", "cur"):
+                folder = self._p("mail", alias, sub)
+                if not os.path.isdir(folder):
+                    continue
+                for fn in os.listdir(folder):
+                    m = self._parse(os.path.join(folder, fn))
+                    st = self.status(m["message_id"])
+                    when = email.utils.parsedate_to_datetime(m["date"]).astimezone(datetime.timezone.utc)
+                    rows.append({"at": when, "type": "message", "id": m["message_id"], "from": m["from"],
+                                 "to": alias, "kind": m["kind"], "subject": m["subject"], "state": st["state"],
+                                 "outcome": (st.get("outcome") or {}).get("outcome"), "in_reply_to": m["in_reply_to"]})
+        for c in self.claims():
+            when = datetime.datetime.strptime(c["since"], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=datetime.timezone.utc)
+            rows.append({"at": when, "type": "claim", "id": c["id"], "alias": c["alias"], "paths": c["paths"],
+                         "branch": c["branch"], "state": c["state"],
+                         "released_at": (c["released"] or {}).get("at"), "released_by": (c["released"] or {}).get("by")})
+        rows.sort(key=lambda r: (r["at"], r["type"], r["id"]))
+        return rows
 
     # ---------------------------------------------------------------- claims
     def claim(self, inc, paths, branch=None, ttl_s=3600):

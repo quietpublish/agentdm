@@ -57,6 +57,8 @@ MUTATIONS = [
     ("outcome-without-offer", "agentdm/store.py", 'if not offer or offer["alias"] != alias:\n            raise AgentdmError("message was never offered to that alias")\n        if offer["offered_to"] != (inc or HUMAN):\n            raise AgentdmError("message was offered to a different incarnation; fetch it first")\n        if os.path.exists(self._p("outcomes"',
      'if False:\n            raise AgentdmError("message was never offered to that alias")\n        if offer and offer["offered_to"] != (inc or HUMAN):\n            raise AgentdmError("message was offered to a different incarnation; fetch it first")\n        if os.path.exists(self._p("outcomes"',
      "test_intents.IntentAcceptance.test_in02_outcomes_need_an_offered_request_kind"),
+    ("log-unordered", "agentdm/store.py", 'rows.sort(key=lambda r: (r["at"], r["type"], r["id"]))', 'rows.reverse()',
+     "test_cli_contract.LogAcceptance.test_cl04_log_is_one_timeline_and_offers_nothing"),
     ("notify-cap-ignored", "agentdm/notify.py", 'if len(recent) >= cap:', 'if False:',
      "test_notify.NotifyCapAcceptance.test_nt06_pushes_are_capped_per_sender_per_hour"),
     ("notify-off-keeps-setting", "agentdm/notify.py", 'os.remove(path)\n        except FileNotFoundError:', 'pass\n        except FileNotFoundError:',

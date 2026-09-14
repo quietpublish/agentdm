@@ -101,6 +101,7 @@ name <alias> <new-alias>
 forget <offline-alias>
 gc
 tail
+log
 store
 notify [ntfy <topic-url> [token] | telegram <bot-token> <chat-id> | subject on|off | test | off]
 ```
@@ -110,6 +111,11 @@ Quote subjects, bodies and IDs in shell commands. Without a body argument,
 requests that still need `accept` or `decline`. `inbox` reads mail addressed to `human` and
 marks it offered; `tail` repeatedly fetches that same inbox, so it also offers
 messages. Neither command acknowledges automatically. Stop `tail` with Ctrl-C.
+`log` prints one dated timeline of every message in every mailbox (sender,
+recipient, kind, receipt state, outcome, never the body) and every claim with
+its state. It reads only: nothing is offered, acknowledged or decided by
+looking. It is the human's view of the whole conversation; agents have no
+such tool.
 
 The human can name sessions, release claims and forget offline aliases. `gc`
 cleans retired/offline provisional roster entries; it is not a mail-purge

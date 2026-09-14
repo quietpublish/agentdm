@@ -18,6 +18,7 @@ USAGE = """agentdm - local DMs between agent sessions in this project
   agentdm claims                       all claims with state held | stale | released
   agentdm release <claim-id>           human release (the only path besides the holder)
   agentdm tail                         poll human's inbox every second
+  agentdm log                          one timeline of every message (receipt, outcome) and claim; reads only
   agentdm store                        resolved store path for this project
   agentdm notify                       show the human notification setting (off by default)
   agentdm notify ntfy <topic-url> [token]        push metadata to an ntfy topic
@@ -55,7 +56,7 @@ def main(argv=None):
     arity = {"who": (0, 1), "send": (2, None), "inbox": (0, 0), "ack": (1, 1),
              "accept": (1, None), "decline": (1, None),
              "status": (1, 1), "claims": (0, 0), "release": (1, 1), "tail": (0, 0),
-             "name": (2, 2), "forget": (1, 1), "gc": (0, 0), "store": (0, 0), "notify": (0, 3)}
+             "name": (2, 2), "forget": (1, 1), "gc": (0, 0), "store": (0, 0), "notify": (0, 3), "log": (0, 0)}
     minimum, maximum = arity.get(cmd, (0, 0))
     invalid = (cmd not in arity or len(args) < minimum
                or (maximum is not None and len(args) > maximum)
@@ -102,6 +103,17 @@ def main(argv=None):
                         seen.add(m["message_id"])
                         print(f"{time.strftime('%H:%M:%S')}  {m['from']}  [{m['kind']}] {m['subject']}: {m['body'].strip()}", flush=True)
                 time.sleep(1)
+        elif cmd == "log":
+            for r in store.timeline():
+                at = r["at"].astimezone().strftime("%Y-%m-%d %H:%M:%S")
+                if r["type"] == "message":
+                    sender = r["from"].partition("/")[2].rpartition("@")[0] or r["from"]
+                    outcome = f" outcome={r['outcome']}" if r["outcome"] else ""
+                    reply = " (reply)" if r["in_reply_to"] else ""
+                    print(f"{at}  msg   {r['id']}  {sender} -> {r['to']}  [{r['kind']}] {r['state']}{outcome}{reply}  {r['subject']}")
+                else:
+                    rel = f" released {r['released_at'][11:19]}Z by {'human' if r['released_by'] == HUMAN else r['alias']}" if r["released_at"] else ""
+                    print(f"{at}  claim {r['id']}  {r['alias']}  {r['state']}{rel}  {' '.join(r['paths'])}")
         elif cmd == "name":
             print(store.rename_alias(args[0], args[1]))
         elif cmd == "forget":
