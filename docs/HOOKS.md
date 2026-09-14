@@ -41,7 +41,12 @@ selected during setup. The escaped quotes preserve paths containing spaces.
 
 For **Codex**, use the target project's `.codex/hooks.json` for a scoped pilot.
 Review the exact definitions through `/hooks`; project and hook trust are
-separate checks. Do not write trust hashes or bypass trust. Avoid duplicate
+separate checks, and a changed definition must be trusted again. Codex's
+`SessionStart` entry needs a `matcher` on the start `source`
+(`"startup|resume|clear|compact"`): an omitted or empty matcher matches
+everything on Claude Code but never fires on Codex (observed 2026-09-13: the
+end hook wrote its breadcrumb, the start hook did not, until the matcher was
+added). `SessionEnd` needs no matcher. Do not write trust hashes or bypass trust. Avoid duplicate
 definitions across user/project layers: Codex combines matching hooks.
 [Official Codex hook reference](https://learn.chatgpt.com/docs/hooks).
 
