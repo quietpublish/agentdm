@@ -46,7 +46,13 @@ separate checks, and a changed definition must be trusted again. Codex's
 (`"startup|resume|clear|compact"`): an omitted or empty matcher matches
 everything on Claude Code but never fires on Codex (observed 2026-09-13: the
 end hook wrote its breadcrumb, the start hook did not, until the matcher was
-added). `SessionEnd` needs no matcher. Do not write trust hashes or bypass trust. Avoid duplicate
+added). `SessionEnd` needs no matcher. Verified 2026-09-13 with the matcher: a
+Codex session in the pilot project read `online` for the first time. Its
+start breadcrumb appeared with the session's first turn, ten seconds after the
+process started and a tenth of a second after the first prompt, and a session
+that was opened but never prompted left none, so treat Codex `SessionStart` as
+firing with the first turn, not at launch: the row reads `transport-only`
+until the human speaks once. Do not write trust hashes or bypass trust. Avoid duplicate
 definitions across user/project layers: Codex combines matching hooks.
 [Official Codex hook reference](https://learn.chatgpt.com/docs/hooks).
 
