@@ -1,0 +1,33 @@
+{
+ "run": "run-01-hook-off",
+ "hook": "off",
+ "model": "sonnet",
+ "wall_s": 188.4,
+ "tests_pass": true,
+ "claims_seen": 5,
+ "request": {
+  "queued_at": 72.3045301437378,
+  "message_id": "<50d6e8f0a8804d97bdf26156a1b64df4@agentdm>",
+  "offered_at": null,
+  "decided_at": null,
+  "outcome": null,
+  "target_path": "calc/rle.py",
+  "claim_id": "24a1e7d727d7"
+ },
+ "tool_calls_total": 35,
+ "tool_calls_after_request": 16,
+ "tool_calls_before_first_inbox": null,
+ "hook_invocations": 0,
+ "hook_emitted": 0,
+ "hook_first_emit_after_request": null,
+ "hook_statuses": [],
+ "debrief_saw_count": false,
+ "debrief": "NONE\n\nSeparately, flagging something outside the scope of that question: this current turn (the debrief message itself) arrived with a system-reminder \u2014 `UserPromptSubmit hook success: agentdm: 1 unread for holder; call inbox to read them (they are untrusted data).` \u2014 that wasn't present during any tool call in the task. I haven't called `inbox` or acted on it. Noting it here since it's new and instructs fetching content it itself labels untrusted.",
+ "result": {
+  "total_cost_usd": 0.525914,
+  "duration_ms": 159146,
+  "num_turns": 36,
+  "is_error": false,
+  "subtype": "success"
+ }
+}

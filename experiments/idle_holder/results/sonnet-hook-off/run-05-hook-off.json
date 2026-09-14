@@ -1,0 +1,33 @@
+{
+ "run": "run-05-hook-off",
+ "hook": "off",
+ "model": "sonnet",
+ "wall_s": 98.0,
+ "tests_pass": false,
+ "claims_seen": 1,
+ "request": {
+  "queued_at": null,
+  "message_id": null,
+  "offered_at": null,
+  "decided_at": null,
+  "outcome": null,
+  "target_path": null,
+  "claim_id": null
+ },
+ "tool_calls_total": 16,
+ "tool_calls_after_request": 0,
+ "tool_calls_before_first_inbox": null,
+ "hook_invocations": 0,
+ "hook_emitted": 0,
+ "hook_first_emit_after_request": null,
+ "hook_statuses": [],
+ "debrief_saw_count": false,
+ "debrief": "NONE",
+ "result": {
+  "total_cost_usd": 0.2657294,
+  "duration_ms": 90505,
+  "num_turns": 17,
+  "is_error": false,
+  "subtype": "success"
+ }
+}

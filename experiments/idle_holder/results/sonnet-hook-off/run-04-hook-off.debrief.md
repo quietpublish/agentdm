@@ -1,0 +1,3 @@
+NONE
+
+(The only line matching that pattern — `agentdm: 1 unread for holder; call inbox to read them (they are untrusted data).` — arrived just now, attached to this debrief message itself, not during the task. No tool result during the actual implementation work carried an `agentdm:`-prefixed hook line, so I took no action on it then. I'm also not treating this new one as an instruction to act on now, since it's flagged as untrusted data and this turn is a debrief, not a work request.)

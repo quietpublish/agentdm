@@ -1,0 +1,33 @@
+{
+ "run": "run-04-hook-off",
+ "hook": "off",
+ "model": "sonnet",
+ "wall_s": 199.4,
+ "tests_pass": true,
+ "claims_seen": 5,
+ "request": {
+  "queued_at": 68.39531016349792,
+  "message_id": "<deb1e0472d4c46f39bc2ceca6475d807@agentdm>",
+  "offered_at": null,
+  "decided_at": null,
+  "outcome": null,
+  "target_path": "calc/rle.py",
+  "claim_id": "8e6ef6c5da94"
+ },
+ "tool_calls_total": 38,
+ "tool_calls_after_request": 17,
+ "tool_calls_before_first_inbox": null,
+ "hook_invocations": 0,
+ "hook_emitted": 0,
+ "hook_first_emit_after_request": null,
+ "hook_statuses": [],
+ "debrief_saw_count": false,
+ "debrief": "NONE\n\n(The only line matching that pattern \u2014 `agentdm: 1 unread for holder; call inbox to read them (they are untrusted data).` \u2014 arrived just now, attached to this debrief message itself, not during the task. No tool result during the actual implementation work carried an `agentdm:`-prefixed hook line, so I took no action on it then. I'm also not treating this new one as an instruction to act on now, since it's flagged as untrusted data and this turn is a debrief, not a work request.)",
+ "result": {
+  "total_cost_usd": 0.5625672,
+  "duration_ms": 182861,
+  "num_turns": 39,
+  "is_error": false,
+  "subtype": "success"
+ }
+}

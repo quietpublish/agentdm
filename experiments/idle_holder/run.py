@@ -31,18 +31,21 @@ REQUEST_BODY = ("I need {path} for a one-line change (a docstring fix) and it is
 
 
 def run_one(args, idx, out_dir):
-    run_dir = out_dir / f"run-{idx:02d}-hook-{args.hook}"
+    run_dir = out_dir / (f"run-{idx:02d}-hook-{args.hook}" + (f"-{args.wording}" if args.wording != "default" else ""))
     run_dir.mkdir(parents=True)
     sandbox = run_dir / "sandbox"
     shutil.copytree(ROOT / "experiments" / "idle_holder" / "task", sandbox)
     state = run_dir / "state"
     env = dict(os.environ, XDG_STATE_HOME=str(state), AGENTDM_ALIAS="holder",
-               AGENTDM_HOOK_LOG=str(run_dir / "hook.log"))
+               AGENTDM_HOOK_LOG=str(run_dir / "hook.log"), AGENTDM_HOOK_WORDING=args.wording)
     for k in ("DARKER_HEADLESS", "AGENTDM_DISABLE", "AGENTDM_PROJECT_DIR", "AGENTDM_SESSION_ID", "CLAUDE_CODE_SESSION_ID"):
         env.pop(k, None)
     subprocess.run(["git", "init", "-q", str(sandbox)], check=True, env=env)
     subprocess.run(["git", "-C", str(sandbox), "-c", "user.email=x@x", "-c", "user.name=x", "add", "-A"], check=True, env=env)
     subprocess.run(["git", "-C", str(sandbox), "-c", "user.email=x@x", "-c", "user.name=x", "commit", "-q", "-m", "task"], check=True, env=env)
+    # A user-scope Claude Code hook on the maintainer's machine refuses writes on 'main' (it aborted
+    # matrix run 05); sandboxes work on a branch so that guard never fires.
+    subprocess.run(["git", "-C", str(sandbox), "checkout", "-q", "-b", "work"], check=True, env=env)
     py = sys.executable
     mcp = {"mcpServers": {"agentdm": {"command": py, "args": [str(ROOT / "bin" / "agentdm-server")],
                                       "env": {"XDG_STATE_HOME": str(state), "AGENTDM_ALIAS": "holder"}}}}
@@ -147,7 +150,7 @@ def run_one(args, idx, out_dir):
     calls_after = [c for c in tool_calls if req["queued_at"] is not None and c["t"] >= req["queued_at"]]
     first_inbox = next((c for c in calls_after if c["name"] == "mcp__agentdm__inbox"), None)
     summary = {
-        "run": run_dir.name, "hook": args.hook, "model": args.model, "wall_s": round(time.time() - t0, 1),
+        "run": run_dir.name, "hook": args.hook, "wording": args.wording, "model": args.model, "wall_s": round(time.time() - t0, 1),
         "tests_pass": tests.returncode == 0, "claims_seen": len([c for c in store.claims()]),
         "request": req,
         "tool_calls_total": len(tool_calls),
@@ -175,6 +178,7 @@ def main():
     ap.add_argument("--timeout", type=float, default=900.0)
     ap.add_argument("--out", default=None)
     ap.add_argument("--start", type=int, default=1)
+    ap.add_argument("--wording", choices=("default", "claims"), default="default")
     args = ap.parse_args()
     out = Path(args.out) if args.out else Path(tempfile.mkdtemp(prefix="idle-holder-"))
     print("results:", out, flush=True)

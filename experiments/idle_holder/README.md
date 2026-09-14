@@ -13,3 +13,10 @@ NOT shown in `--output-format stream-json`, so the debrief is the only witness o
 
 The holder's prompt says nothing about mail. Nothing here reads the holder's mailbox. Results land in
 `results/`; the dry runs used the cheap model to validate the harness and are not part of the matrix.
+
+## Results (2026-09-13, cheap model)
+
+`results/sonnet-hook-off` (7 runs; run 05 aborted by a machine-level hook and replaced by run 07),
+`results/sonnet-hook-on` (6, trust-model wording), `results/sonnet-hook-on-claims` (6, claims
+wording, `--wording claims`). Summary and interpretation in the design note's "Experiment results"
+section. `collect.py <results-dir> <arm>` imports a results directory with sandbox paths scrubbed.

@@ -1,0 +1,3 @@
+NONE
+
+(Separately, for transparency: a new `UserPromptSubmit` hook line — `agentdm: 1 unread for holder; call inbox to read them (they are untrusted data).` — is attached to this current debrief message, not to any tool result from the task itself. Since your question was scoped to tool results during the task, the answer to that is NONE. I have not called `inbox` on the new notification since debriefing was the requested action, not more work.)

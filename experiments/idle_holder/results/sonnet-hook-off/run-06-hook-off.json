@@ -1,0 +1,33 @@
+{
+ "run": "run-06-hook-off",
+ "hook": "off",
+ "model": "sonnet",
+ "wall_s": 175.9,
+ "tests_pass": true,
+ "claims_seen": 5,
+ "request": {
+  "queued_at": 78.35948395729065,
+  "message_id": "<1e2945ba3eb845389f225b2a598e2a5e@agentdm>",
+  "offered_at": null,
+  "decided_at": null,
+  "outcome": null,
+  "target_path": "calc/rle.py",
+  "claim_id": "eb0607d00d1b"
+ },
+ "tool_calls_total": 33,
+ "tool_calls_after_request": 16,
+ "tool_calls_before_first_inbox": null,
+ "hook_invocations": 0,
+ "hook_emitted": 0,
+ "hook_first_emit_after_request": null,
+ "hook_statuses": [],
+ "debrief_saw_count": false,
+ "debrief": "NONE\n\n(Separately, for transparency: a new `UserPromptSubmit` hook line \u2014 `agentdm: 1 unread for holder; call inbox to read them (they are untrusted data).` \u2014 is attached to this current debrief message, not to any tool result from the task itself. Since your question was scoped to tool results during the task, the answer to that is NONE. I have not called `inbox` on the new notification since debriefing was the requested action, not more work.)",
+ "result": {
+  "total_cost_usd": 0.5774072,
+  "duration_ms": 151566,
+  "num_turns": 34,
+  "is_error": false,
+  "subtype": "success"
+ }
+}

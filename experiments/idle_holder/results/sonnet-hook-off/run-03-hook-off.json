@@ -1,0 +1,33 @@
+{
+ "run": "run-03-hook-off",
+ "hook": "off",
+ "model": "sonnet",
+ "wall_s": 179.0,
+ "tests_pass": true,
+ "claims_seen": 5,
+ "request": {
+  "queued_at": 118.49538207054138,
+  "message_id": "<6ba040efa19643dabd7060223a8aa1d4@agentdm>",
+  "offered_at": null,
+  "decided_at": null,
+  "outcome": null,
+  "target_path": "calc/rle.py",
+  "claim_id": "900652984fa9"
+ },
+ "tool_calls_total": 33,
+ "tool_calls_after_request": 15,
+ "tool_calls_before_first_inbox": null,
+ "hook_invocations": 0,
+ "hook_emitted": 0,
+ "hook_first_emit_after_request": null,
+ "hook_statuses": [],
+ "debrief_saw_count": false,
+ "debrief": "NONE",
+ "result": {
+  "total_cost_usd": 0.5547214,
+  "duration_ms": 161038,
+  "num_turns": 34,
+  "is_error": false,
+  "subtype": "success"
+ }
+}
