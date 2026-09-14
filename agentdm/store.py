@@ -368,7 +368,7 @@ class Store:
             raise AgentdmError("incarnation does not own that alias")
         return rec
 
-    def send(self, from_alias, from_inc, to_alias, subject, body, kind="note", in_reply_to=None):
+    def send(self, from_alias, from_inc, to_alias, subject, body, kind="note", in_reply_to=None, outcome_for=None):
         actor = self._actor(from_alias, from_inc)
         if to_alias != HUMAN and self._alias_current(to_alias) is None:
             raise AgentdmError(f"unknown recipient alias {to_alias!r}")
@@ -386,6 +386,9 @@ class Store:
         msg["X-Agentdm-Kind"] = kind
         msg["X-Agentdm-From-Incarnation"] = from_inc or HUMAN
         msg["X-Agentdm-Project"] = self.project_key
+        if outcome_for:                                     # a reply that carries an outcome names the receipt
+            msg["X-Agentdm-Outcome-For"] = outcome_for[0]
+            msg["X-Agentdm-Outcome"] = outcome_for[1]
         # cte is explicit: with max_line_length=None the auto-encoder compares int <= None on 3.9-3.11.
         msg.set_content(body, cte="8bit")
         self._maildir(to_alias).add(msg)
@@ -396,10 +399,13 @@ class Store:
             m = email.message_from_binary_file(f, policy=email.policy.default)
         body = m.get_body(preferencelist=("plain",))
         kind = m["X-Agentdm-Kind"]
-        return {"message_id": m["Message-ID"], "from": m["From"], "to": m["To"],
-                "subject": m["Subject"], "date": m["Date"], "kind": kind,
-                "expects_outcome": kind in REQUEST_KINDS,
-                "in_reply_to": m["In-Reply-To"], "body": body.get_content() if body else ""}
+        parsed = {"message_id": m["Message-ID"], "from": m["From"], "to": m["To"],
+                  "subject": m["Subject"], "date": m["Date"], "kind": kind,
+                  "expects_outcome": kind in REQUEST_KINDS,
+                  "in_reply_to": m["In-Reply-To"], "body": body.get_content() if body else ""}
+        if m["X-Agentdm-Outcome-For"]:
+            parsed["outcome_for"] = {"message_id": m["X-Agentdm-Outcome-For"], "outcome": m["X-Agentdm-Outcome"]}
+        return parsed
 
     def _find(self, alias, message_id):
         """The stored message with this Message-ID in one alias's mailbox, or None."""
@@ -472,7 +478,8 @@ class Store:
         if m["kind"] not in REQUEST_KINDS:
             raise AgentdmError(f"kind {m['kind']!r} does not take an outcome; only " + "|".join(REQUEST_KINDS))
         sender = str(m["from"] or "").partition("/")[2].rpartition("@")[0]
-        reply = self.send(alias, inc, sender, f"{outcome}: {m['subject']}", note or "", "ack", message_id)
+        reply = self.send(alias, inc, sender, f"{outcome}: {m['subject']}", note or "", "ack", message_id,
+                          outcome_for=(message_id, outcome))
         _write_json(self._p("outcomes", f"{key}.json"),
                     {"outcome": outcome, "decided_by": inc or HUMAN, "alias": alias, "decided_at": _now(),
                      "kind": m["kind"], "reply_message_id": reply, "note": note or ""})

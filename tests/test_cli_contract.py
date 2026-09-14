@@ -54,12 +54,15 @@ class LogAcceptance(AcceptanceCase):
         from acceptance_support import StdioPeer
         a = self.peer("alpha", "alpha-session")
         b = self.peer("beta", "beta-session")
+        import time
         a.call(2, "send", to="beta", subject="synthetic handoff", body="PRIVATE_BODY", kind="handoff")
         handoff = StdioPeer.payload(a.response(2))["message_id"]
         b.call(2, "inbox"); b.response(2)
         b.call(3, "accept", message_id=handoff, note="ok"); b.response(3)
+        time.sleep(1.1)                                   # distinct seconds, so order is observable
         b.call(4, "claim", paths=["docs/x.md"], ttl_s=600)
         claim = StdioPeer.payload(b.response(4))["claim_id"]
+        time.sleep(1.1)
         a.call(3, "send", to="beta", subject="request: docs/x.md", body="PRIVATE_BODY", kind="claim")
         request = StdioPeer.payload(a.response(3))["message_id"]
         state = self.state / "agentdm"
@@ -78,6 +81,8 @@ class LogAcceptance(AcceptanceCase):
         lines = [l for l in out.splitlines() if l.strip()]
         stamps = [l[:19] for l in lines if l[:4].isdigit()]
         self.assertEqual(stamps, sorted(stamps), "timeline must be in date order")
+        self.assertLess(out.index(handoff), out.index(claim), "handoff came before the claim")
+        self.assertLess(out.index(claim), out.index(request), "the claim came before the request")
         after = sorted(str(p.relative_to(state)) for p in state.rglob("*") if p.parent.name in ("offers", "acks", "outcomes"))
         self.assertEqual(before, after, "reading the log must not offer, ack or decide anything")
         self.assertEqual(self.cli("log", "extra").returncode, 2)

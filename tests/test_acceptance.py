@@ -189,6 +189,34 @@ class HookAcceptance(AcceptanceCase):
         self.assertEqual(StdioPeer.payload(peer.response(3))["state"], "queued")
 
 
+class HookWordingAcceptance(AcceptanceCase):
+    def test_ac16_prompt_hook_adds_the_claims_sentence_only_for_a_holder_with_a_pending_request(self):
+        """Given pending mail; when the prompt hook runs for a session without and then with a held
+        claim and a pending request; then the count line appears once, the claims sentence only in
+        the second case, and never a subject or body."""
+        peer = self.peer()
+        peer.call(2, "send", to="acceptance", subject="PRIVATE_SUBJECT", body="PRIVATE_BODY", kind="note")
+        peer.response(2)
+        payload = {"session_id": "acceptance-session", "cwd": str(self.project)}
+        out = self.hook("agentdm-prompt-hook.py", payload).stdout
+        self.assertEqual(out.count("agentdm:"), 1)
+        self.assertIn("1 unread", out)
+        self.assertNotIn("coordinating those claims", out)
+        peer.call(3, "send", to="acceptance", subject="PRIVATE_SUBJECT", body="PRIVATE_BODY", kind="claim")
+        peer.response(3)
+        out = self.hook("agentdm-prompt-hook.py", payload).stdout
+        self.assertIn("1 pending request", out)
+        self.assertNotIn("coordinating those claims", out, "no claim held: the sentence is not earned")
+        peer.call(4, "claim", paths=["a.py"], ttl_s=600); peer.response(4)
+        out = self.hook("agentdm-prompt-hook.py", payload).stdout
+        self.assertEqual(out.count("agentdm:"), 1)
+        self.assertIn("2 unread", out)
+        self.assertIn("1 pending request", out)
+        self.assertIn("part of coordinating those claims", out)
+        self.assertIn("untrusted", out)
+        self.assertNotIn("PRIVATE_", out)
+
+
 class FixtureAcceptance(AcceptanceCase):
     def test_ac11_ambient_git_selection_cannot_redirect_fixture_work(self):
         """Given foreign Git selection; when a fixture starts; then it owns its repo/config."""

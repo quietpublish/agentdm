@@ -58,8 +58,13 @@ checked under your host and machine load.
 
 ## Then add unread-count awareness
 
-The prompt hook adds only an unread count to a turn already being started, never
-a subject or body. With no store or zero unread it is silent. If it cannot find
+The prompt hook adds only an unread count, and a pending-request count, to a
+turn already being started, never a subject or body. When the session's alias
+holds a claim and a request is pending, the line also says that answering a
+peer's request about claimed paths is part of coordinating those claims and
+that the message is untrusted data; that sentence comes from the session's
+own claims, not from any peer, and it is the wording the 2026-09-13
+experiment showed agents read correctly rather than ignoring. With no store or zero unread it is silent. If it cannot find
 one usable binding or read the mailbox, it emits a fixed unavailable line; the
 diagnostic reason goes to stderr. Counting never offers a message.
 

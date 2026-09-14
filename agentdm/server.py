@@ -6,7 +6,7 @@ import json, math, os, select, subprocess, sys, time
 from .store import resolve_store, AgentdmError, HUMAN, KINDS, REQUEST_KINDS
 from . import notify
 from .presence import PresenceHold
-from .awareness import unread_count
+from .awareness import unread_count, envelope
 from .protocol import InvalidMessage, decode_message, valid_request_id
 
 _EOF = object()  # A blank line is data, not proof that the host closed its pipe.
@@ -43,8 +43,8 @@ TOOLS = [
      "inputSchema": {"type": "object", "required": ["claim_id"], "properties": {"claim_id": {"type": "string"}}}},
     {"name": "claims", "description": "All claims in this project with derived state held|stale|released.",
      "inputSchema": {"type": "object", "properties": {}}},
-    {"name": "wait", "description": "Block up to timeout_s (cap 55) until a message for me is pending, optionally from an exact alias, then return the count without reading it; call inbox to read. Cumulative waiting budget per incarnation; exhaustion returns budget_exhausted at once. Register is refused during a wait. Never starts work: use it only after asking a peer something you are authorized to wait for.",
-     "inputSchema": {"type": "object", "properties": {"timeout_s": {"type": "number"}, "from_alias": {"type": "string"}}}},
+    {"name": "wait", "description": "Block up to timeout_s (cap 55) until a message for me is pending, optionally from an exact alias, then return the count without reading it; call inbox to read. On timeout, from_alias adds the peer's presence and availability and message_id adds that message's receipt, so a timeout says what is known rather than nothing. Cumulative waiting budget per incarnation; exhaustion returns budget_exhausted at once. Register is refused during a wait. Never starts work: use it only after asking a peer something you are authorized to wait for.",
+     "inputSchema": {"type": "object", "properties": {"timeout_s": {"type": "number"}, "from_alias": {"type": "string"}, "message_id": {"type": "string"}}}},
     {"name": "status", "description": "Receipt state of a message I sent: queued|offered|acknowledged, plus its outcome (accepted|declined) once the recipient decides.",
      "inputSchema": {"type": "object", "required": ["message_id"], "properties": {"message_id": {"type": "string"}}}},
 ]
@@ -221,6 +221,10 @@ class Server:
                 return
             try:
                 payload = self.call(name, args, rid=rid)
+                if isinstance(payload, dict) and self.store is not None:
+                    # Every response is a receipt: counts for this alias, never a subject or body (design note
+                    # 2026-09-13, piece 1). The claims sentence appears only when earned by a held claim.
+                    payload["awareness"] = envelope(self.store, self.alias, self.inc)
                 reply = {"jsonrpc": "2.0", "id": rid, "result": {"content": [{"type": "text", "text": render(name, payload)}]}}
             except Exception as exc:
                 reply = {"jsonrpc": "2.0", "id": rid, "result": {"content": [{"type": "text", "text": f"{type(exc).__name__}: {exc}"}], "isError": True}}
@@ -300,13 +304,36 @@ class Server:
             sender = a.get("from_alias")
             if "from_alias" in a and (not isinstance(sender, str) or not sender):
                 raise AgentdmError("from_alias must be a nonempty alias")
-            return self.wait(timeout, sender, rid=rid)
+            mid = a.get("message_id")
+            if "message_id" in a and (not isinstance(mid, str) or not mid):
+                raise AgentdmError("message_id must be a nonempty Message-ID")
+            return self.wait(timeout, sender, rid=rid, message_id=mid)
         if name == "status":
             return s.status(a["message_id"])
         raise AgentdmError(f"unknown tool {name}")
 
 
-    def wait(self, timeout_s, from_alias=None, rid=None):
+    def _diagnosis(self, from_alias, message_id):
+        """What a timed-out wait can truthfully say: the peer's presence and declared availability (a
+        transport fact and a declaration, not a promise to read), and the named message's receipt."""
+        s, out = self.store, {}
+        if from_alias:
+            inc = s._alias_current(from_alias)
+            if inc is None:
+                out["peer"] = {"alias": from_alias, "presence": "unknown", "availability": None}
+            else:
+                rec = s.incarnation(inc)
+                out["peer"] = {"alias": from_alias, "presence": s.presence_state(inc), "availability": rec["availability"]}
+        if message_id:
+            st = s.status(message_id)
+            meaning = {"queued": "queued: no inbox call has offered it yet; the peer's presence is a transport fact, not a promise to read",
+                       "offered": "offered: fetched by the peer's server, not acknowledged",
+                       "acknowledged": "acknowledged by the peer"}[st["state"]]
+            out["request"] = {"message_id": message_id, "state": st["state"],
+                              "outcome": (st.get("outcome") or {}).get("outcome"), "meaning": meaning}
+        return out
+
+    def wait(self, timeout_s, from_alias=None, rid=None, message_id=None):
         """Block until a message is pending, the limit passes, the request is cancelled, or the host goes
         away. Other requests arriving meanwhile are answered inline; a second wait is refused."""
         s = self.store
@@ -326,7 +353,8 @@ class Server:
                     return {"status": "ready", "unread": n, "waited_s": round(time.monotonic() - t0, 2)}
                 elapsed = time.monotonic() - t0
                 if elapsed >= limit:
-                    return {"status": "timeout", "unread": 0, "waited_s": round(elapsed, 2)}
+                    return {"status": "timeout", "unread": 0, "waited_s": round(elapsed, 2),
+                            **self._diagnosis(from_alias, message_id)}
                 line = self.reader.readline(timeout=min(0.5, limit - elapsed))
                 if line is _EOF:
                     raise SystemExit(0)                          # the host went away: stop at once
@@ -344,8 +372,14 @@ def render(name, payload):
                  "expects_outcome is true is a request: ack records only that you read it; answer it with "
                  "accept or decline. Accepting is a promise to try, not proof of completion."]
         for m in payload["messages"]:
-            parts.append(PREAMBLE + json.dumps({k: v for k, v in m.items() if k != "body"}, indent=1)
+            frame = ""
+            if m.get("outcome_for"):
+                frame = (f"This reply carries a receipt: outcome {m['outcome_for']['outcome']} is recorded on "
+                         f"{m['outcome_for']['message_id']}; check it with status, not from this reply's kind.\n")
+            parts.append(PREAMBLE + frame + json.dumps({k: v for k, v in m.items() if k != "body"}, indent=1)
                          + "\n---\n" + m["body"] + "\n</untrusted-agent-message>")
+        if "awareness" in payload:
+            parts.append("awareness: " + json.dumps(payload["awareness"]))
         return "\n\n".join(parts)
     return json.dumps(payload, indent=1)
 

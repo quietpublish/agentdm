@@ -6,7 +6,7 @@ projects. They never call a model or change installed host configuration.
 
 Run `python3 -m unittest discover -s tests -p 'test*.py' -v`.
 Run the new slice alone with `python3 -m unittest discover -s tests -p test_acceptance.py -v`.
-Run twenty-seven deliberate regressions with `python3 tests/run_mutation_checks.py`.
+Run thirty-two deliberate regressions with `python3 tests/run_mutation_checks.py`.
 
 ## Given / When / Then
 
@@ -47,6 +47,11 @@ Run twenty-seven deliberate regressions with `python3 tests/run_mutation_checks.
 | IN-03 | A review-request and a note | Fetched | Only the request expects an outcome; the frame says ack is not acceptance | Real inbox text |
 | IN-04 | A live sender | Kind is outside the vocabulary | Refused; nothing queued | Real stdio |
 | IN-05 | An agent's question to the human | Human accepts from the CLI | Reply reaches the agent; status shows accepted; a note cannot be answered; `--kind` is validated | Real bin/agentdm and stdio |
+| IN-06 | A held claim and a queued request | Any tool is called | Every result carries unread and pending counts, the claims sentence only when a claim is held and a request pending, never a subject or body; the outcome drops pending to zero without acknowledging | Real stdio |
+| IN-07 | A mailbox that cannot be listed | Any tool is called | `awareness` is `unavailable`; the tool still answers; no zero is invented | Real stdio and filesystem permissions |
+| IN-08 | A request to a peer and a wait on it | The wait times out | The result names the peer's presence and availability and the message's receipt, outcome and meaning; an unknown alias reads `unknown`; no diagnosis without those arguments | Real stdio |
+| IN-09 | An accepted request | The requester fetches the reply | The reply's metadata and frame name the decided message and its outcome | Real inbox text |
+| AC-16 | Pending mail; then a held claim and a pending request | The prompt hook runs | One count line; the claims sentence only in the second case; never a subject or body | Real hook subprocess |
 | NT-01 | No notify setting | A request is sent | No HTTP request; no setting file | Loopback HTTP sink |
 | NT-02 | ntfy enabled at a loopback sink | Requests, notes and a decline occur | One titled POST per wanted event with sender, recipient, kind and outcome; no subject unless enabled; never a body or reason; send returns at once | Loopback HTTP sink and timing |
 | NT-03 | Telegram enabled at a loopback API | Human declines | One JSON POST to sendMessage with the chat id and metadata only | Loopback HTTP sink |
