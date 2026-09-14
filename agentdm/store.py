@@ -368,10 +368,13 @@ class Store:
             raise AgentdmError("incarnation does not own that alias")
         return rec
 
-    def send(self, from_alias, from_inc, to_alias, subject, body, kind="note", in_reply_to=None, outcome_for=None):
+    def send(self, from_alias, from_inc, to_alias, subject, body, kind="note", in_reply_to=None, outcome_for=None,
+             about_claim=None):
         actor = self._actor(from_alias, from_inc)
         if to_alias != HUMAN and self._alias_current(to_alias) is None:
             raise AgentdmError(f"unknown recipient alias {to_alias!r}")
+        if about_claim is not None and not _read_json(self._p("claims", f"{_mid_key(str(about_claim))}.json")):
+            raise AgentdmError(f"unknown claim {about_claim!r}")
         if kind not in KINDS:
             raise AgentdmError("kind must be " + "|".join(KINDS))
         mid = f"<{uuid.uuid4().hex}@agentdm>"
@@ -386,6 +389,8 @@ class Store:
         msg["X-Agentdm-Kind"] = kind
         msg["X-Agentdm-From-Incarnation"] = from_inc or HUMAN
         msg["X-Agentdm-Project"] = self.project_key
+        if about_claim:                                     # a request about a claim: derived as `contested` on that claim
+            msg["X-Agentdm-About-Claim"] = str(about_claim)
         if outcome_for:                                     # a reply that carries an outcome names the receipt
             msg["X-Agentdm-Outcome-For"] = outcome_for[0]
             msg["X-Agentdm-Outcome"] = outcome_for[1]
@@ -405,6 +410,8 @@ class Store:
                   "in_reply_to": m["In-Reply-To"], "body": body.get_content() if body else ""}
         if m["X-Agentdm-Outcome-For"]:
             parsed["outcome_for"] = {"message_id": m["X-Agentdm-Outcome-For"], "outcome": m["X-Agentdm-Outcome"]}
+        if m["X-Agentdm-About-Claim"]:
+            parsed["about_claim"] = m["X-Agentdm-About-Claim"]
         return parsed
 
     def _find(self, alias, message_id):
@@ -545,7 +552,7 @@ class Store:
         c["released"] = {"by": who, "at": _now()}
         _write_json(self._p("claims", f"{claim_id}.json"), c)
 
-    def claims(self):
+    def claims(self, detail=False):
         out = []
         for fn in sorted(os.listdir(self._p("claims"))):
             c = _read_json(self._p("claims", fn))
@@ -556,7 +563,40 @@ class Store:
             else:
                 c["state"] = "held"
             out.append(c)
+        if detail:
+            requests, unreadable = self._requests_by_claim()
+            for c in out:
+                c["requests"] = requests.get(c["id"], [])
+                if unreadable:                                # a mailbox that could not be listed may hold requests
+                    c["requests_unreadable_mailboxes"] = unreadable
+                # Contested is derived at read time from request kinds with no outcome; nothing is written to
+                # the claim, `held` is untouched, and release authority is unchanged. Display, not pressure.
+                c["contested"] = c["state"] != "released" and any(r["outcome"] is None for r in c["requests"])
         return out
+
+    def _requests_by_claim(self):
+        """Request-kind messages that name a claim, by claim id, with the receipt each carries. Read-only."""
+        by, unreadable = {}, []
+        for alias in sorted(os.listdir(self._p("mail"))):
+            for sub in ("new", "cur"):
+                folder = self._p("mail", alias, sub)
+                if not os.path.isdir(folder):
+                    continue
+                try:
+                    names = sorted(os.listdir(folder))
+                except OSError:
+                    if alias not in unreadable:
+                        unreadable.append(alias)              # reported, never silently treated as empty (DM-09)
+                    continue
+                for fn in names:
+                    m = self._parse(os.path.join(folder, fn))
+                    if not m.get("about_claim") or m["kind"] not in REQUEST_KINDS:
+                        continue
+                    st = self.status(m["message_id"])
+                    by.setdefault(m["about_claim"], []).append({
+                        "message_id": m["message_id"], "from": m["from"].partition("/")[2].rpartition("@")[0],
+                        "kind": m["kind"], "state": st["state"], "outcome": (st.get("outcome") or {}).get("outcome")})
+        return by, unreadable
 
 
 def _sha(s):

@@ -166,6 +166,10 @@ class AwarenessAcceptance(AcceptanceCase):
         payload = StdioPeer.payload(beta.response(2))
         self.assertEqual(payload["awareness"], "unavailable")
         self.assertIn("claims", payload)
+        beta.call(3, "claim", paths=["a.py"], ttl_s=600); beta.response(3)
+        beta.call(4, "claims")
+        c = StdioPeer.payload(beta.response(4))["claims"][0]
+        self.assertEqual(c["requests_unreadable_mailboxes"], ["beta"], "an unlistable mailbox is named, not treated as empty")
 
     def test_in08_wait_timeout_diagnoses_the_peer_and_the_request(self):
         """Given alpha sent beta a request and waits on beta; when the wait times out; then the
@@ -205,3 +209,44 @@ class AwarenessAcceptance(AcceptanceCase):
         import re
         self.assertRegex(text, r'"outcome_for": \{\s*"message_id": "%s",\s*"outcome": "accepted"' % re.escape(mid))
         self.assertIn("outcome accepted is recorded on", text)
+
+
+class ContestedClaimAcceptance(AcceptanceCase):
+    def test_in10_a_request_about_a_claim_marks_it_contested_until_answered(self):
+        """Given beta holds claim C; when alpha sends a request about C; then claims shows C contested
+        with alpha's message and receipt, the human CLI names the sender, the envelope stays
+        counts-only, an unknown claim id is refused, and answering clears contested but keeps the record."""
+        alpha = self.peer("alpha", "alpha-session")
+        beta = self.peer("beta", "beta-session")
+        beta.call(2, "claim", paths=["docs/x.md"], ttl_s=600)
+        claim = StdioPeer.payload(beta.response(2))["claim_id"]
+        alpha.call(2, "send", to="beta", subject="PRIVATE_SUBJECT", body="PRIVATE_BODY", kind="claim", about_claim="nope")
+        self.assertTrue(alpha.response(2)["result"].get("isError"), "unknown claim id must be refused")
+        alpha.call(3, "send", to="beta", subject="PRIVATE_SUBJECT", body="PRIVATE_BODY", kind="claim", about_claim=claim)
+        mid = StdioPeer.payload(alpha.response(3))["message_id"]
+        alpha.call(4, "claims")
+        payload = StdioPeer.payload(alpha.response(4))
+        c = next(c for c in payload["claims"] if c["id"] == claim)
+        self.assertTrue(c["contested"])
+        self.assertEqual(c["requests"], [{"message_id": mid, "from": "alpha", "kind": "claim", "state": "queued", "outcome": None}])
+        self.assertNotIn("contested", payload["awareness"], "the envelope stays counts-only")
+        self.assertNotIn("PRIVATE_", json.dumps(payload))
+        out = self.cli("claims").stdout
+        self.assertIn(claim, out)
+        self.assertIn("contested by alpha", out)
+        self.assertNotIn("PRIVATE_", out)
+        alpha.call(5, "send", to="beta", subject="synthetic", body="synthetic", kind="note", about_claim=claim)
+        alpha.response(5)
+        alpha.call(6, "claims")
+        c = next(c for c in StdioPeer.payload(alpha.response(6))["claims"] if c["id"] == claim)
+        self.assertEqual(len(c["requests"]), 1, "a note about a claim is not a request and does not contest it")
+        beta.call(3, "inbox"); beta.response(3)
+        beta.call(4, "decline", message_id=mid, reason="mid-edit"); beta.response(4)
+        beta.call(5, "claims")
+        c = next(c for c in StdioPeer.payload(beta.response(5))["claims"] if c["id"] == claim)
+        self.assertFalse(c["contested"])
+        self.assertEqual((c["requests"][0]["state"], c["requests"][0]["outcome"]), ("offered", "declined"))
+        self.assertNotIn("contested", self.cli("claims").stdout)
+        sent = self.cli("send", "beta", "synthetic", "synthetic", "--kind", "claim", "--about-claim", claim)
+        self.assertEqual(sent.returncode, 0, sent.stderr)
+        self.assertIn("contested by human", self.cli("claims").stdout)

@@ -28,6 +28,14 @@ the first decision stands. Deciding also queues an `ack`-kind reply to the sende
 `inbox` pick it up without a new mechanism. `status` on the request shows both
 its receipt state and its outcome.
 
+A request may name the claim it concerns with `about_claim`. `claims` then
+lists, under that claim, each such request with its sender, receipt and
+outcome, and reads `contested: true` while any of them has no outcome. This is
+derived when read; nothing is written to the claim, `held` is unchanged, and
+only the holder or a human can still release it. Contested is a fact for the
+holder, the requester and the human to see in `claims`; it never appears in
+the per-response counts, so no peer can nag through it.
+
 ## Agent tools
 
 | Tool | Purpose |
@@ -35,7 +43,7 @@ its receipt state and its outcome.
 | `register(alias, availability, reclaim_token)` | Choose an alias or update declared availability; returns identity and private reclaim token |
 | `whoami` | Inspect this transport's identity, binding and resolved store |
 | `who(all)` | List the project roster; `all=true` includes hidden historical rows |
-| `send(to, subject, body, kind, in_reply_to)` | Queue addressed mail; optional kind is note, question, handoff, review-request, claim or ack |
+| `send(to, subject, body, kind, in_reply_to, about_claim)` | Queue addressed mail; optional kind is note, question, handoff, review-request, claim or ack; `about_claim` names the claim a request concerns |
 | `inbox` | Explicitly fetch messages, framed as untrusted data; requests are marked `expects_outcome` |
 | `ack(message_id)` | Acknowledge a message after reading; not acceptance |
 | `accept(message_id, note)` | Answer an offered request: outcome receipt plus a reply to the sender |
@@ -43,7 +51,7 @@ its receipt state and its outcome.
 | `status(message_id)` | Inspect a message receipt and, for a request, its outcome |
 | `wait(timeout_s, from_alias, message_id)` | Wait for pending mail, optionally from an exact sender alias; a timeout diagnoses the named peer and message |
 | `claim(paths, branch, ttl_s)` | Record advisory ownership |
-| `claims` | Read held, stale and released claims |
+| `claims` | Read held, stale and released claims, the requests about each, and whether each is contested |
 | `release(claim_id)` | Explicitly release one's own claim |
 
 Aliases contain up to 64 lowercase letters, digits, dots, underscores or hyphens,
@@ -109,7 +117,7 @@ target project. The following list shows arguments after that executable:
 
 ```text
 who [--all]
-send <alias> <subject> [body] [--kind <kind>]
+send <alias> <subject> [body] [--kind <kind>] [--about-claim <claim-id>]
 inbox
 ack <message-id>
 accept <message-id> [note]

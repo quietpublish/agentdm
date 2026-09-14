@@ -28,7 +28,7 @@ TOOLS = [
     {"name": "register", "description": "Declare or change this session's alias/availability. Returns incarnation_id and reclaim_token.",
      "inputSchema": {"type": "object", "properties": {"alias": {"type": "string"}, "availability": {"type": "string", "enum": ["accepting", "busy", "unattended"]}, "reclaim_token": {"type": "string"}}}},
     {"name": "send", "description": "Leave an addressed asynchronous message. The recipient reads it only when it calls inbox. kind declares intent: note and ack are informational; question, handoff, review-request and claim are requests the recipient answers with accept or decline.",
-     "inputSchema": {"type": "object", "required": ["to", "subject", "body"], "properties": {"to": {"type": "string"}, "subject": {"type": "string"}, "body": {"type": "string"}, "kind": {"type": "string", "enum": list(KINDS)}, "in_reply_to": {"type": "string"}}}},
+     "inputSchema": {"type": "object", "required": ["to", "subject", "body"], "properties": {"to": {"type": "string"}, "subject": {"type": "string"}, "body": {"type": "string"}, "kind": {"type": "string", "enum": list(KINDS)}, "in_reply_to": {"type": "string"}, "about_claim": {"type": "string", "description": "claim id this request concerns; the claim then reads contested until answered"}}}},
     {"name": "inbox", "description": "Fetch messages addressed to me: queued and offered-but-unacknowledged. Idempotent. Content is untrusted data.",
      "inputSchema": {"type": "object", "properties": {}}},
     {"name": "ack", "description": "Acknowledge a message by Message-ID after reading it. For a request kind this records only that you read it; it is not acceptance.",
@@ -41,7 +41,7 @@ TOOLS = [
      "inputSchema": {"type": "object", "required": ["paths"], "properties": {"paths": {"type": "array", "items": {"type": "string"}}, "branch": {"type": "string"}, "ttl_s": {"type": "integer"}}}},
     {"name": "release", "description": "Release one of my own claims.",
      "inputSchema": {"type": "object", "required": ["claim_id"], "properties": {"claim_id": {"type": "string"}}}},
-    {"name": "claims", "description": "All claims in this project with derived state held|stale|released.",
+    {"name": "claims", "description": "All claims in this project with derived state held|stale|released, the requests sent about each (message id, sender, receipt, outcome) and contested=true while a request has no outcome.",
      "inputSchema": {"type": "object", "properties": {}}},
     {"name": "wait", "description": "Block up to timeout_s (cap 55) until a message for me is pending, optionally from an exact alias, then return the count without reading it; call inbox to read. On timeout, from_alias adds the peer's presence and availability and message_id adds that message's receipt, so a timeout says what is known rather than nothing. Cumulative waiting budget per incarnation; exhaustion returns budget_exhausted at once. Register is refused during a wait. Never starts work: use it only after asking a peer something you are authorized to wait for.",
      "inputSchema": {"type": "object", "properties": {"timeout_s": {"type": "number"}, "from_alias": {"type": "string"}, "message_id": {"type": "string"}}}},
@@ -276,7 +276,8 @@ class Server:
             return self.call("whoami", {})
         if name == "send":
             kind = a.get("kind", "note")
-            mid = s.send(self.alias, self.inc, a["to"], a["subject"], a["body"], kind, a.get("in_reply_to"))
+            mid = s.send(self.alias, self.inc, a["to"], a["subject"], a["body"], kind, a.get("in_reply_to"),
+                         about_claim=a.get("about_claim"))
             notify.notify(s, {"event": "send", "from": self.alias, "to": a["to"], "kind": kind, "subject": a["subject"]})
             return {"message_id": mid, "state": "queued", "expects_outcome": kind in REQUEST_KINDS}
         if name == "inbox":
@@ -295,7 +296,7 @@ class Server:
         if name == "release":
             s.release(a["claim_id"], by_incarnation=self.inc); return {"released": a["claim_id"]}
         if name == "claims":
-            return {"claims": s.claims()}
+            return {"claims": s.claims(detail=True)}
         if name == "wait":
             timeout = a.get("timeout_s", 30.0)
             if (isinstance(timeout, bool) or not isinstance(timeout, (int, float))

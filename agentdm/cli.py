@@ -9,13 +9,14 @@ USAGE = """agentdm - local DMs between agent sessions in this project
   agentdm name <alias> <new-alias>     name a session (human authority; moves its mailbox)
   agentdm gc                           remove roster litter: retired aliases, offline provisional rows
   agentdm forget <alias>               drop one offline alias from the roster (refused while alive)
-  agentdm send <to> <subject> [body]   body from argv or stdin; --kind note|question|handoff|review-request|claim|ack
+  agentdm send <to> <subject> [body]   body from argv or stdin; --kind note|question|handoff|review-request|claim|ack;
+                                       --about-claim <claim-id> marks that claim contested until answered
   agentdm inbox                        fetch messages addressed to `human` (marks them offered)
   agentdm ack <message-id>             acknowledge reading; for a request this is not acceptance
   agentdm accept <message-id> [note]   answer a request kind: records the outcome, replies to the sender
   agentdm decline <message-id> [reason]
   agentdm status <message-id>          queued | offered | acknowledged, plus outcome once decided
-  agentdm claims                       all claims with state held | stale | released
+  agentdm claims                       all claims with state held | stale | released, and who contests them
   agentdm release <claim-id>           human release (the only path besides the holder)
   agentdm tail                         poll human's inbox every second
   agentdm log                          one timeline of every message (receipt, outcome) and claim; reads only
@@ -48,10 +49,14 @@ def main(argv=None):
         print(USAGE); return 0
     cmd, args = argv[0], argv[1:]
     # Validate usage before resolving a project or creating any local state.
-    kind = "note"
+    kind, about_claim = "note", None
     if cmd == "send" and "--kind" in args:
         at = args.index("--kind")
         kind = args[at + 1] if at + 1 < len(args) else ""
+        args = args[:at] + args[at + 2:]
+    if cmd == "send" and "--about-claim" in args:
+        at = args.index("--about-claim")
+        about_claim = args[at + 1] if at + 1 < len(args) else ""
         args = args[:at] + args[at + 2:]
     arity = {"who": (0, 1), "send": (2, None), "inbox": (0, 0), "ack": (1, 1),
              "accept": (1, None), "decline": (1, None),
@@ -61,7 +66,7 @@ def main(argv=None):
     invalid = (cmd not in arity or len(args) < minimum
                or (maximum is not None and len(args) > maximum)
                or (cmd == "who" and args not in ([], ["--all"]))
-               or (cmd == "send" and kind not in KINDS)
+               or (cmd == "send" and (kind not in KINDS or about_claim == ""))
                or (cmd == "notify" and not _notify_form_ok(args)))
     if invalid:
         print(USAGE, file=sys.stderr)
@@ -75,7 +80,7 @@ def main(argv=None):
         elif cmd == "send":
             to, subject = args[0], args[1]
             body = " ".join(args[2:]) if len(args) > 2 else sys.stdin.read()
-            print(store.send(HUMAN, None, to, subject, body, kind))
+            print(store.send(HUMAN, None, to, subject, body, kind, about_claim=about_claim))
         elif cmd == "inbox":
             for m in store.inbox(HUMAN, None):
                 asks = "  (request: accept or decline)" if m["expects_outcome"] and not m.get("outcome") else ""
@@ -91,8 +96,10 @@ def main(argv=None):
         elif cmd == "status":
             print(json.dumps(store.status(args[0]), indent=1))
         elif cmd == "claims":
-            for c in store.claims():
-                print(f"{c['id']}  {c['state']:<9} {c['alias']:<20} {c['branch'] or '-':<12} {' '.join(c['paths'])}")
+            for c in store.claims(detail=True):
+                open_by = sorted({r["from"] for r in c["requests"] if r["outcome"] is None})
+                flag = f"  contested by {', '.join(open_by)}" if c["contested"] else ""
+                print(f"{c['id']}  {c['state']:<9} {c['alias']:<20} {c['branch'] or '-':<12} {' '.join(c['paths'])}{flag}")
         elif cmd == "release":
             store.release(args[0], by_human=True); print("released")
         elif cmd == "tail":

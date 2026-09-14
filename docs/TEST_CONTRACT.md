@@ -6,7 +6,7 @@ projects. They never call a model or change installed host configuration.
 
 Run `python3 -m unittest discover -s tests -p 'test*.py' -v`.
 Run the new slice alone with `python3 -m unittest discover -s tests -p test_acceptance.py -v`.
-Run thirty-two deliberate regressions with `python3 tests/run_mutation_checks.py`.
+Run thirty-four deliberate regressions with `python3 tests/run_mutation_checks.py`.
 
 ## Given / When / Then
 
@@ -52,6 +52,7 @@ Run thirty-two deliberate regressions with `python3 tests/run_mutation_checks.py
 | IN-08 | A request to a peer and a wait on it | The wait times out | The result names the peer's presence and availability and the message's receipt, outcome and meaning; an unknown alias reads `unknown`; no diagnosis without those arguments | Real stdio |
 | IN-09 | An accepted request | The requester fetches the reply | The reply's metadata and frame name the decided message and its outcome | Real inbox text |
 | AC-16 | Pending mail; then a held claim and a pending request | The prompt hook runs | One count line; the claims sentence only in the second case; never a subject or body | Real hook subprocess |
+| IN-10 | A held claim | A request names it with `about_claim`; a note names it; the holder declines | `claims` lists the request with sender, receipt and outcome and reads contested only while unanswered; the note does not count; the envelope stays counts-only; an unknown claim id is refused; the human CLI names the contester | Real stdio and bin/agentdm |
 | NT-01 | No notify setting | A request is sent | No HTTP request; no setting file | Loopback HTTP sink |
 | NT-02 | ntfy enabled at a loopback sink | Requests, notes and a decline occur | One titled POST per wanted event with sender, recipient, kind and outcome; no subject unless enabled; never a body or reason; send returns at once | Loopback HTTP sink and timing |
 | NT-03 | Telegram enabled at a loopback API | Human declines | One JSON POST to sendMessage with the chat id and metadata only | Loopback HTTP sink |

@@ -67,6 +67,10 @@ MUTATIONS = [
      "test_intents.AwarenessAcceptance.test_in09_outcome_replies_name_the_receipt_they_carry"),
     ("hook-sentence-unearned", "hooks/agentdm-prompt-hook.py", 'if r.get("pending_requests") and r.get("holds_claim"):', 'if r.get("pending_requests"):',
      "test_acceptance.HookWordingAcceptance.test_ac16_prompt_hook_adds_the_claims_sentence_only_for_a_holder_with_a_pending_request"),
+    ("contested-ignores-outcome", "agentdm/store.py", 'any(r["outcome"] is None for r in c["requests"])', 'bool(c["requests"])',
+     "test_intents.ContestedClaimAcceptance.test_in10_a_request_about_a_claim_marks_it_contested_until_answered"),
+    ("unknown-claim-accepted", "agentdm/store.py", 'if about_claim is not None and not _read_json(self._p("claims", f"{_mid_key(str(about_claim))}.json")):', 'if False:',
+     "test_intents.ContestedClaimAcceptance.test_in10_a_request_about_a_claim_marks_it_contested_until_answered"),
     ("log-unordered", "agentdm/store.py", 'rows.sort(key=lambda r: (r["at"], r["type"], r["id"]))', 'rows.reverse()',
      "test_cli_contract.LogAcceptance.test_cl04_log_is_one_timeline_and_offers_nothing"),
     ("notify-cap-ignored", "agentdm/notify.py", 'if len(recent) >= cap:', 'if False:',
@@ -85,8 +89,10 @@ MUTATIONS = [
 def run(root, selector):
     env = isolated_environment(None, root / "tests")
     selectors = [selector] if isinstance(selector, str) else selector
+    # The green baseline runs the whole acceptance set (real stdio peers, deliberate one-second sleeps);
+    # a single mutation run is one test. 30 s fitted the original five modules, not the current seven.
     return subprocess.run([sys.executable, "-m", "unittest", *selectors], cwd=root,
-                          env=env, capture_output=True, text=True, timeout=30)
+                          env=env, capture_output=True, text=True, timeout=300 if len(selectors) > 1 else 60)
 
 
 def main():
